@@ -1,0 +1,153 @@
+{
+  "common": {
+    "appName": "TableFlow",
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "retry": "Réessayer",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "search": "Rechercher...",
+    "noResults": "Aucun résultat trouvé",
+    "back": "Retour",
+    "next": "Suivant",
+    "submit": "Soumettre",
+    "confirm": "Confirmer",
+    "close": "Fermer",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "auth": {
+    "login": "Se connecter",
+    "register": "Créer un compte",
+    "logout": "Se déconnecter",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "noAccount": "Vous n'avez pas de compte ?",
+    "hasAccount": "Vous avez déjà un compte ?",
+    "restaurantName": "Nom du restaurant",
+    "createRestaurant": "Créer votre restaurant"
+  },
+  "nav": {
+    "overview": "Aperçu",
+    "orders": "Commandes",
+    "menu": "Menu",
+    "tables": "Tables",
+    "staff": "Personnel",
+    "settings": "Paramètres"
+  },
+  "dashboard": {
+    "welcome": "Bienvenue",
+    "activeOrders": "Commandes actives",
+    "todayOrders": "Commandes du jour",
+    "revenue": "Chiffre d'affaires",
+    "menuItems": "Articles du menu",
+    "recentOrders": "Commandes récentes",
+    "viewAll": "Voir tout →",
+    "popularItems": "Populaire aujourd'hui"
+  },
+  "orders": {
+    "title": "Commandes",
+    "newOrder": "Nouvelle commande",
+    "orderNumber": "Commande #{number}",
+    "table": "Table {table}",
+    "status": {
+      "pending": "En attente",
+      "confirmed": "Confirmée",
+      "preparing": "En préparation",
+      "ready": "Prête",
+      "delivered": "Livrée",
+      "cancelled": "Annulée"
+    },
+    "updateStatus": "Mettre à jour le statut",
+    "cancelOrder": "Annuler la commande",
+    "noOrders": "Aucune commande pour le moment",
+    "total": "Total"
+  },
+  "menu": {
+    "title": "Gestion du menu",
+    "addCategory": "Ajouter une catégorie",
+    "addItem": "Ajouter un article",
+    "editItem": "Modifier l'article",
+    "categoryName": "Nom de la catégorie",
+    "description": "Description",
+    "itemName": "Nom de l'article",
+    "price": "Prix",
+    "image": "Image",
+    "availability": "Disponible",
+    "noCategories": "Aucune catégorie pour le moment",
+    "noItems": "Aucun article dans cette catégorie"
+  },
+  "tables": {
+    "title": "Gestion des tables",
+    "addTable": "Ajouter une table",
+    "tableNumber": "Table {number}",
+    "generateQR": "Générer le QR code",
+    "printQR": "Imprimer le QR code",
+    "downloadQR": "Télécharger le QR",
+    "noTables": "Aucune table pour le moment",
+    "scanToOrder": "Scannez pour commander"
+  },
+  "staff": {
+    "title": "Gestion du personnel",
+    "inviteMember": "Inviter un membre",
+    "role": "Rôle",
+    "roles": {
+      "owner": "Propriétaire",
+      "manager": "Gérant",
+      "waiter": "Serveur"
+    },
+    "noStaff": "Aucun membre du personnel"
+  },
+  "customer": {
+    "menu": "Menu",
+    "viewCart": "Voir le panier ({count})",
+    "cart": "Votre panier",
+    "emptyCart": "Votre panier est vide",
+    "addToCart": "Ajouter au panier",
+    "removeFromCart": "Retirer",
+    "placeOrder": "Passer la commande",
+    "orderPlaced": "Commande envoyée !",
+    "orderPlacedDesc": "Votre commande a été transmise à la cuisine",
+    "trackOrder": "Suivre la commande",
+    "yourName": "Votre nom (optionnel)",
+    "orderNotes": "Instructions spéciales",
+    "subtotal": "Sous-total",
+    "total": "Total",
+    "itemAdded": "Article ajouté au panier",
+    "orderStatus": "Statut de la commande",
+    "estimatedTime": "Temps estimé",
+    "minutes": "min"
+  },
+  "landing": {
+    "hero": {
+      "title": "Le système d'exploitation pour les restaurants modernes",
+      "subtitle": "Permettez à vos clients de commander directement depuis leur table grâce aux QR codes. Gérez les commandes en temps réel. Évoluez sans effort.",
+      "cta": "Commencer gratuitement",
+      "ctaSecondary": "Voir la démo"
+    },
+    "features": {
+      "title": "Tout ce dont votre restaurant a besoin",
+      "qr": {
+        "title": "Commande par QR code",
+        "description": "Les clients scannent, parcourent et commandent — aucune application à télécharger."
+      },
+      "realtime": {
+        "title": "Tableau de bord en temps réel",
+        "description": "Voyez les commandes apparaître instantanément. Mettez à jour les statuts en un clic."
+      },
+      "menu": {
+        "title": "Menu numérique",
+        "description": "De beaux menus avec photos, descriptions et disponibilité en temps réel."
+      },
+      "scale": {
+        "title": "Conçu pour évoluer",
+        "description": "Architecture multi-tenant au service de milliers de restaurants."
+      }
+    }
+  }
+}

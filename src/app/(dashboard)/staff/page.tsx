@@ -1,0 +1,246 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { fetchStaffMembers, inviteStaffMember as inviteAction, removeStaffMember as removeAction, changeStaffRole as changeRoleAction } from "./actions";
+
+interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  role: "owner" | "manager" | "waiter";
+  is_active: boolean;
+  joined_at: string;
+}
+
+const roleColors: Record<string, string> = {
+  owner: "bg-primary/15 text-primary",
+  manager: "bg-chart-2/15 text-chart-2",
+  waiter: "bg-chart-3/15 text-chart-3",
+};
+
+export default function StaffPage() {
+  const t = useTranslations();
+  const [isLoading, setIsLoading] = useState(true);
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newRole, setNewRole] = useState<"manager" | "waiter">("waiter");
+
+  useEffect(() => {
+    async function loadData() {
+      const res = await fetchStaffMembers();
+      if (res.error) {
+        toast.error(res.error);
+        setIsLoading(false);
+        return;
+      }
+      setRestaurantId(res.restaurantId || null);
+      setStaff(res.staff || []);
+      setIsLoading(false);
+    }
+    loadData();
+  }, []);
+
+  async function inviteMember() {
+    if (!newName.trim() || !newEmail.trim() || !restaurantId) return;
+    
+    const res = await inviteAction(restaurantId, newName, newEmail, newRole);
+    if (res.error) {
+      toast.error(res.error);
+      return;
+    }
+    
+    if (res.member) {
+      setStaff([...staff, res.member as StaffMember]);
+    }
+    
+    setNewName("");
+    setNewEmail("");
+    toast.success(`Invitation sent to ${newEmail}`);
+  }
+
+  async function removeMember(id: string) {
+    const previousStaff = [...staff];
+    setStaff(staff.filter((m) => m.id !== id));
+    
+    const res = await removeAction(id);
+    if (res.error) {
+      toast.error(res.error);
+      setStaff(previousStaff);
+    } else {
+      toast.success("Member removed");
+    }
+  }
+
+  async function changeRole(id: string, role: "manager" | "waiter") {
+    const previousStaff = [...staff];
+    setStaff(staff.map((m) => (m.id === id ? { ...m, role } : m)));
+    
+    const res = await changeRoleAction(id, role);
+    if (res.error) {
+      toast.error(res.error);
+      setStaff(previousStaff);
+    } else {
+      toast.success("Role updated");
+    }
+  }
+
+  if (isLoading) {
+    return <div className="flex h-64 items-center justify-center">Loading staff...</div>;
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{t("staff.title")}</h1>
+          <p className="mt-1 text-muted-foreground">
+            {staff.filter((m) => m.is_active).length} active members
+          </p>
+        </div>
+        <Dialog>
+          <DialogTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+            {t("staff.inviteMember")}
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("staff.inviteMember")}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Full Name</Label>
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Jean Dupont" />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="jean@restaurant.com" />
+              </div>
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <div className="flex gap-2">
+                  {(["manager", "waiter"] as const).map((role) => (
+                    <button
+                      key={role}
+                      onClick={() => setNewRole(role)}
+                      className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
+                        newRole === role ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"
+                      }`}
+                    >
+                      {role.charAt(0).toUpperCase() + role.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                {t("common.cancel")}
+              </DialogClose>
+              <DialogClose
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2"
+                onClick={inviteMember}
+              >
+                Send Invite
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Staff List */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Team Members</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y">
+            {staff.map((member) => (
+              <div
+                key={member.id}
+                className={`flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/50 ${
+                  !member.is_active ? "opacity-50" : ""
+                }`}
+              >
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                    {member.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{member.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {member.email}
+                  </p>
+                </div>
+                <Badge className={`text-xs ${roleColors[member.role]}`}>
+                  {member.role}
+                </Badge>
+                <span className="hidden sm:block text-xs text-muted-foreground">
+                  Joined {member.joined_at}
+                </span>
+                {member.role !== "owner" && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="p-1 rounded hover:bg-muted transition-colors outline-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {member.role !== "manager" && (
+                        <DropdownMenuItem onClick={() => changeRole(member.id, "manager")}>
+                          Promote to Manager
+                        </DropdownMenuItem>
+                      )}
+                      {member.role !== "waiter" && (
+                        <DropdownMenuItem onClick={() => changeRole(member.id, "waiter")}>
+                          Set as Waiter
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => removeMember(member.id)}
+                      >
+                        Remove
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

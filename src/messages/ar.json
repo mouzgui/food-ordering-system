@@ -1,0 +1,153 @@
+{
+  "common": {
+    "appName": "TableFlow",
+    "loading": "جاري التحميل...",
+    "error": "حدث خطأ ما",
+    "retry": "حاول مرة أخرى",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "create": "إنشاء",
+    "search": "بحث...",
+    "noResults": "لم يتم العثور على نتائج",
+    "back": "رجوع",
+    "next": "التالي",
+    "submit": "إرسال",
+    "confirm": "تأكيد",
+    "close": "إغلاق",
+    "yes": "نعم",
+    "no": "لا"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "logout": "تسجيل الخروج",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "noAccount": "ليس لديك حساب؟",
+    "hasAccount": "لديك حساب بالفعل؟",
+    "restaurantName": "اسم المطعم",
+    "createRestaurant": "أنشئ مطعمك"
+  },
+  "nav": {
+    "overview": "نظرة عامة",
+    "orders": "الطلبات",
+    "menu": "القائمة",
+    "tables": "الطاولات",
+    "staff": "الموظفون",
+    "settings": "الإعدادات"
+  },
+  "dashboard": {
+    "welcome": "مرحباً بعودتك",
+    "activeOrders": "الطلبات النشطة",
+    "todayOrders": "طلبات اليوم",
+    "revenue": "الإيرادات",
+    "menuItems": "عناصر القائمة",
+    "recentOrders": "الطلبات الأخيرة",
+    "viewAll": "عرض الكل ←",
+    "popularItems": "الأكثر طلباً اليوم"
+  },
+  "orders": {
+    "title": "الطلبات",
+    "newOrder": "طلب جديد",
+    "orderNumber": "طلب #{number}",
+    "table": "طاولة {table}",
+    "status": {
+      "pending": "قيد الانتظار",
+      "confirmed": "مؤكد",
+      "preparing": "قيد التحضير",
+      "ready": "جاهز",
+      "delivered": "تم التسليم",
+      "cancelled": "ملغي"
+    },
+    "updateStatus": "تحديث الحالة",
+    "cancelOrder": "إلغاء الطلب",
+    "noOrders": "لا توجد طلبات بعد",
+    "total": "المجموع"
+  },
+  "menu": {
+    "title": "إدارة القائمة",
+    "addCategory": "إضافة فئة",
+    "addItem": "إضافة عنصر",
+    "editItem": "تعديل العنصر",
+    "categoryName": "اسم الفئة",
+    "itemName": "اسم العنصر",
+    "description": "الوصف",
+    "price": "السعر",
+    "image": "الصورة",
+    "availability": "متاح",
+    "noCategories": "لا توجد فئات بعد",
+    "noItems": "لا توجد عناصر في هذه الفئة"
+  },
+  "tables": {
+    "title": "إدارة الطاولات",
+    "addTable": "إضافة طاولة",
+    "tableNumber": "طاولة {number}",
+    "generateQR": "إنشاء رمز QR",
+    "printQR": "طباعة رمز QR",
+    "downloadQR": "تحميل رمز QR",
+    "noTables": "لا توجد طاولات بعد",
+    "scanToOrder": "امسح للطلب"
+  },
+  "staff": {
+    "title": "إدارة الموظفين",
+    "inviteMember": "دعوة موظف",
+    "role": "الدور",
+    "roles": {
+      "owner": "المالك",
+      "manager": "المدير",
+      "waiter": "النادل"
+    },
+    "noStaff": "لا يوجد موظفون بعد"
+  },
+  "customer": {
+    "menu": "القائمة",
+    "viewCart": "عرض السلة ({count})",
+    "cart": "سلتك",
+    "emptyCart": "سلتك فارغة",
+    "addToCart": "أضف إلى السلة",
+    "removeFromCart": "إزالة",
+    "placeOrder": "تقديم الطلب",
+    "orderPlaced": "تم تقديم الطلب!",
+    "orderPlacedDesc": "تم إرسال طلبك إلى المطبخ",
+    "trackOrder": "تتبع الطلب",
+    "yourName": "اسمك (اختياري)",
+    "orderNotes": "تعليمات خاصة",
+    "subtotal": "المجموع الفرعي",
+    "total": "المجموع",
+    "itemAdded": "تمت إضافة العنصر إلى السلة",
+    "orderStatus": "حالة الطلب",
+    "estimatedTime": "الوقت المقدر",
+    "minutes": "دقيقة"
+  },
+  "landing": {
+    "hero": {
+      "title": "نظام التشغيل للمطاعم الحديثة",
+      "subtitle": "مكّن عملاءك من الطلب مباشرة من طاولاتهم باستخدام رموز QR. أدر الطلبات في الوقت الفعلي. توسّع بسهولة.",
+      "cta": "ابدأ مجاناً",
+      "ctaSecondary": "شاهد العرض التوضيحي"
+    },
+    "features": {
+      "title": "كل ما يحتاجه مطعمك",
+      "qr": {
+        "title": "الطلب عبر رمز QR",
+        "description": "يمسح العملاء ويتصفحون ويطلبون — دون الحاجة لتحميل أي تطبيق."
+      },
+      "realtime": {
+        "title": "لوحة تحكم فورية",
+        "description": "شاهد الطلبات تظهر فوراً. حدّث الحالات بنقرة واحدة."
+      },
+      "menu": {
+        "title": "قائمة رقمية",
+        "description": "قوائم جميلة مع صور وأوصاف وتوافر في الوقت الفعلي."
+      },
+      "scale": {
+        "title": "مصمم للتوسع",
+        "description": "بنية متعددة المستأجرين تخدم آلاف المطاعم."
+      }
+    }
+  }
+}

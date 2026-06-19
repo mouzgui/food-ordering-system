@@ -1,0 +1,153 @@
+{
+  "common": {
+    "appName": "TableFlow",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search...",
+    "noResults": "No results found",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Create Account",
+    "logout": "Sign Out",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "restaurantName": "Restaurant Name",
+    "createRestaurant": "Create your restaurant"
+  },
+  "nav": {
+    "overview": "Overview",
+    "orders": "Orders",
+    "menu": "Menu",
+    "tables": "Tables",
+    "staff": "Staff",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "activeOrders": "Active Orders",
+    "todayOrders": "Today's Orders",
+    "revenue": "Revenue",
+    "menuItems": "Menu Items",
+    "recentOrders": "Recent Orders",
+    "viewAll": "View All →",
+    "popularItems": "Popular Today"
+  },
+  "orders": {
+    "title": "Orders",
+    "newOrder": "New Order",
+    "orderNumber": "Order #{number}",
+    "table": "Table {table}",
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "preparing": "Preparing",
+      "ready": "Ready",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "updateStatus": "Update Status",
+    "cancelOrder": "Cancel Order",
+    "noOrders": "No orders yet",
+    "total": "Total"
+  },
+  "menu": {
+    "title": "Menu Management",
+    "addCategory": "Add Category",
+    "addItem": "Add Item",
+    "editItem": "Edit Item",
+    "categoryName": "Category Name",
+    "itemName": "Item Name",
+    "description": "Description",
+    "price": "Price",
+    "image": "Image",
+    "availability": "Available",
+    "noCategories": "No categories yet",
+    "noItems": "No items in this category"
+  },
+  "tables": {
+    "title": "Table Management",
+    "addTable": "Add Table",
+    "tableNumber": "Table {number}",
+    "generateQR": "Generate QR Code",
+    "printQR": "Print QR Code",
+    "downloadQR": "Download QR",
+    "noTables": "No tables yet",
+    "scanToOrder": "Scan to order"
+  },
+  "staff": {
+    "title": "Staff Management",
+    "inviteMember": "Invite Staff",
+    "role": "Role",
+    "roles": {
+      "owner": "Owner",
+      "manager": "Manager",
+      "waiter": "Waiter"
+    },
+    "noStaff": "No staff members yet"
+  },
+  "customer": {
+    "menu": "Menu",
+    "viewCart": "View Cart ({count})",
+    "cart": "Your Cart",
+    "emptyCart": "Your cart is empty",
+    "addToCart": "Add to Cart",
+    "removeFromCart": "Remove",
+    "placeOrder": "Place Order",
+    "orderPlaced": "Order Placed!",
+    "orderPlacedDesc": "Your order has been sent to the kitchen",
+    "trackOrder": "Track Order",
+    "yourName": "Your Name (optional)",
+    "orderNotes": "Special instructions",
+    "subtotal": "Subtotal",
+    "total": "Total",
+    "itemAdded": "Item added to cart",
+    "orderStatus": "Order Status",
+    "estimatedTime": "Estimated time",
+    "minutes": "min"
+  },
+  "landing": {
+    "hero": {
+      "title": "The Operating System for Modern Restaurants",
+      "subtitle": "Enable your customers to order directly from their tables using QR codes. Manage orders in real-time. Scale effortlessly.",
+      "cta": "Get Started Free",
+      "ctaSecondary": "See Demo"
+    },
+    "features": {
+      "title": "Everything Your Restaurant Needs",
+      "qr": {
+        "title": "QR Code Ordering",
+        "description": "Customers scan, browse, and order — no app download required."
+      },
+      "realtime": {
+        "title": "Real-Time Dashboard",
+        "description": "See orders appear instantly. Update statuses with one click."
+      },
+      "menu": {
+        "title": "Digital Menu",
+        "description": "Beautiful menus with images, descriptions, and real-time availability."
+      },
+      "scale": {
+        "title": "Built to Scale",
+        "description": "Multi-tenant architecture serving thousands of restaurants."
+      }
+    }
+  }
+}
