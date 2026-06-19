@@ -2,62 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-export async function generateDemoData() {
-  const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-
-  // Get restaurant ID
-  const { data: member } = await supabase
-    .from("restaurant_members")
-    .select("restaurant_id")
-    .eq("user_id", user.id)
-    .single() as any;
-
-  if (!member) return { error: "No restaurant found" };
-  const restaurantId = member.restaurant_id;
-
-  // Insert Categories
-  const { data: categories, error: catError } = await supabase
-    .from("categories")
-    .insert([
-      { restaurant_id: restaurantId, name: "Starters", sort_order: 1 },
-      { restaurant_id: restaurantId, name: "Main Courses", sort_order: 2 },
-      { restaurant_id: restaurantId, name: "Beverages", sort_order: 3 },
-    ] as any)
-    .select("id, name");
-
-  if (catError || !categories) return { error: catError?.message || "Failed to create categories" };
-  
-  const cats = categories as any[];
-  const startersId = cats.find(c => c.name === "Starters")!.id;
-  const mainsId = cats.find(c => c.name === "Main Courses")!.id;
-  const bevsId = cats.find(c => c.name === "Beverages")!.id;
-
-  // Insert Menu Items
-  const { error: itemsError } = await supabase.from("menu_items").insert([
-    { category_id: startersId, restaurant_id: restaurantId, name: "Bruschetta", description: "Toasted bread with fresh tomatoes", price: 8.5 },
-    { category_id: startersId, restaurant_id: restaurantId, name: "Caesar Salad", description: "Crisp romaine lettuce with parmesan", price: 10.0 },
-    { category_id: mainsId, restaurant_id: restaurantId, name: "Grilled Salmon", description: "Atlantic salmon with lemon dill sauce", price: 22.0 },
-    { category_id: mainsId, restaurant_id: restaurantId, name: "Beef Tenderloin", description: "8oz tenderloin with red wine reduction", price: 28.0 },
-    { category_id: bevsId, restaurant_id: restaurantId, name: "Espresso", description: "Single shot of rich Italian espresso", price: 3.5 },
-    { category_id: bevsId, restaurant_id: restaurantId, name: "Sparkling Water", description: "San Pellegrino 500ml", price: 3.0 },
-  ] as any);
-
-  if (itemsError) return { error: itemsError.message };
-
-  // Insert Tables
-  const { error: tablesError } = await supabase.from("tables").insert([
-    { restaurant_id: restaurantId, label: "Table 1", number: 1 },
-    { restaurant_id: restaurantId, label: "Table 2", number: 2 },
-    { restaurant_id: restaurantId, label: "Terrace 1", number: 3 },
-  ] as any);
-
-  if (tablesError) return { error: tablesError.message };
-
-  return { success: true };
-}
 
 export async function fetchOverviewStats() {
   const supabase = await createClient() as any;

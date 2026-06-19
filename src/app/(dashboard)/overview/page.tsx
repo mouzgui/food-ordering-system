@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { generateDemoData, fetchOverviewStats } from "./actions";
+import { fetchOverviewStats } from "./actions";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -26,7 +26,6 @@ function timeAgo(dateStr: string) {
 
 export default function OverviewPage() {
   const t = useTranslations();
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [statsData, setStatsData] = useState<any>(null);
 
@@ -38,18 +37,6 @@ export default function OverviewPage() {
     }
     loadStats();
   }, []);
-
-  async function handleGenerateDemoData() {
-    setIsGenerating(true);
-    const result = await generateDemoData();
-    setIsGenerating(false);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("Demo data generated successfully!");
-      window.location.reload();
-    }
-  }
 
   const stats = [
     {
@@ -111,15 +98,6 @@ export default function OverviewPage() {
               Live
             </span>
           </div>
-          <Button 
-            size="sm" 
-            variant="default" 
-            onClick={handleGenerateDemoData} 
-            disabled={isGenerating}
-            className="gap-1.5 bg-brand text-brand-foreground hover:bg-brand/90"
-          >
-            {isGenerating ? "Generating..." : "Generate Demo Data"}
-          </Button>
           <Link href="/orders">
             <Button size="sm" variant="outline" className="gap-1.5">
               View All Orders

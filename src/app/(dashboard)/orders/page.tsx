@@ -17,17 +17,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchUserRestaurantId, updateOrderStatus } from "./actions";
 import { useEffect } from "react";
 
-interface DemoOrder {
-  id: string;
-  order_number: string;
-  table_label: string;
-  table_number: number;
-  status: OrderStatus;
-  items: { name: string; quantity: number; price: number }[];
-  total_amount: number;
-  customer_name?: string;
-  created_at: string;
-}
+
 
 interface RealOrder {
   id: string;
