@@ -37,7 +37,10 @@ interface TableData {
 
 function QRCodeCanvas({ slug, tableId, size = 180 }: { slug: string; tableId: string; size?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const baseUrl = process.env.NEXT_PUBLIC_LOCAL_IP_URL || (typeof window !== "undefined" ? window.location.origin : "");
+  const isLocalhost = typeof window !== "undefined" && window.location.hostname === "localhost";
+  const baseUrl = isLocalhost && process.env.NEXT_PUBLIC_LOCAL_IP_URL 
+    ? process.env.NEXT_PUBLIC_LOCAL_IP_URL 
+    : (typeof window !== "undefined" ? window.location.origin : "");
   const url = `${baseUrl}/${slug}/${tableId}`;
 
   const generateQR = useCallback(async () => {
@@ -144,7 +147,10 @@ export default function TablesPage() {
 
   async function downloadQR(table: TableData) {
     if (!slug) return;
-    const baseUrl = process.env.NEXT_PUBLIC_LOCAL_IP_URL || window.location.origin;
+    const isLocalhost = typeof window !== "undefined" && window.location.hostname === "localhost";
+    const baseUrl = isLocalhost && process.env.NEXT_PUBLIC_LOCAL_IP_URL 
+      ? process.env.NEXT_PUBLIC_LOCAL_IP_URL 
+      : window.location.origin;
     const url = `${baseUrl}/${slug}/${table.id}`;
     try {
       const dataUrl = await QRCode.toDataURL(url, {
