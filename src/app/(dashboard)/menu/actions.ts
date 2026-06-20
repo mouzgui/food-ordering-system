@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 export async function fetchMenuData() {
   const supabase = await createClient() as any;
@@ -58,19 +59,84 @@ export async function createMenuItem(
   restaurantId: string,
   name: string,
   description: string,
-  price: number
+  price: number,
+  imageUrl: string | null = null,
+  extras: any = {}
 ) {
   const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from("menu_items")
     .insert([
-      { category_id: categoryId, restaurant_id: restaurantId, name, description, price, is_available: true }
+      { 
+        category_id: categoryId, 
+        restaurant_id: restaurantId, 
+        name, 
+        description, 
+        price, 
+        image_url: imageUrl,
+        extras: extras,
+        is_available: true 
+      }
     ] as any)
     .select()
     .single();
 
   if (error) return { error: error.message };
   return { item: data };
+}
+
+export async function updateMenuItem(
+  id: string,
+  name: string,
+  description: string,
+  price: number,
+  imageUrl: string | null,
+  extras: any
+) {
+  const supabase = await createClient() as any;
+  const { data, error } = await supabase
+    .from("menu_items")
+    .update({ 
+      name, 
+      description, 
+      price, 
+      image_url: imageUrl,
+      extras: extras
+    } as any)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+  return { item: data };
+}
+
+export async function uploadMenuImage(formData: FormData) {
+  const file = formData.get("file") as File;
+  if (!file) return { error: "No file provided" };
+  
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  // Ensure bucket exists (will fail silently if it already exists, which is fine)
+  await supabaseAdmin.storage.createBucket('menu-images', { public: true }).catch(() => {});
+
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+  const { data, error } = await supabaseAdmin.storage
+    .from('menu-images')
+    .upload(fileName, file, { contentType: file.type });
+
+  if (error) return { error: error.message };
+
+  const { data: { publicUrl } } = supabaseAdmin.storage
+    .from('menu-images')
+    .getPublicUrl(fileName);
+
+  return { url: publicUrl };
 }
 
 export async function deleteMenuItem(id: string) {

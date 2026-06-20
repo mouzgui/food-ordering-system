@@ -32,6 +32,8 @@ import {
   createMenuItem,
   deleteMenuItem as deleteMenuItemAction,
   toggleItemAvailability,
+  updateMenuItem,
+  uploadMenuImage,
 } from "./actions";
 
 // Demo data matching seed.sql
@@ -50,6 +52,7 @@ interface MenuItem {
   price: number;
   is_available: boolean;
   image_url: string | null;
+  extras?: any;
 }
 
 // End of interfaces
@@ -60,8 +63,10 @@ export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDesc, setNewCategoryDesc] = useState("");
-  const [newItem, setNewItem] = useState({ name: "", description: "", price: "" });
+  const [newItem, setNewItem] = useState({ name: "", description: "", price: "", ingredients: "", allergens: "", calories: "", imageFile: null as File | null });
+  const [editItemState, setEditItemState] = useState<{item: MenuItem, form: any} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -175,7 +180,23 @@ export default function MenuPage() {
   async function addItem() {
     if (!newItem.name.trim() || !newItem.price || !activeCategory || !restaurantId) return;
     
+    setIsUploading(true);
+    let imageUrl = null;
+    if (newItem.imageFile) {
+      const formData = new FormData();
+      formData.append("file", newItem.imageFile);
+      const res = await uploadMenuImage(formData);
+      if (res.url) imageUrl = res.url;
+    }
+    setIsUploading(false);
+
     const priceNum = parseFloat(newItem.price);
+    const extras = {
+      ingredients: newItem.ingredients,
+      allergens: newItem.allergens,
+      calories: parseInt(newItem.calories) || 0
+    };
+
     // Optimistic UI update
     const tempId = `temp-${Date.now()}`;
     const item: MenuItem = {
@@ -184,7 +205,8 @@ export default function MenuPage() {
       description: newItem.description,
       price: priceNum,
       is_available: true,
-      image_url: null,
+      image_url: imageUrl,
+      extras
     };
     
     setCategories((prev) =>
@@ -193,9 +215,9 @@ export default function MenuPage() {
       )
     );
     const itemName = newItem.name;
-    setNewItem({ name: "", description: "", price: "" });
+    setNewItem({ name: "", description: "", price: "", ingredients: "", allergens: "", calories: "", imageFile: null });
 
-    const res = await createMenuItem(activeCategory, restaurantId, itemName, item.description, priceNum);
+    const res = await createMenuItem(activeCategory, restaurantId, itemName, item.description, priceNum, imageUrl, extras);
     if (res.error) {
       toast.error(res.error);
       // Revert
@@ -236,6 +258,58 @@ export default function MenuPage() {
     } else {
       toast.success("Item removed");
     }
+  }
+
+  async function saveEditedItem() {
+    if (!editItemState) return;
+    const { item, form } = editItemState;
+    
+    setIsUploading(true);
+    let imageUrl = item.image_url;
+    if (form.imageFile) {
+      const formData = new FormData();
+      formData.append("file", form.imageFile);
+      const res = await uploadMenuImage(formData);
+      if (res.url) imageUrl = res.url;
+    }
+    setIsUploading(false);
+
+    const priceNum = parseFloat(form.price);
+    const extras = {
+      ingredients: form.ingredients,
+      allergens: form.allergens,
+      calories: parseInt(form.calories) || 0
+    };
+
+    const res = await updateMenuItem(item.id, form.name, form.description, priceNum, imageUrl, extras);
+    if (res.error) {
+      toast.error(res.error);
+      return;
+    }
+
+    setCategories((prev) =>
+      prev.map((c) => ({
+        ...c,
+        items: c.items.map((i) => i.id === item.id ? { ...i, name: form.name, description: form.description, price: priceNum, image_url: imageUrl, extras } : i)
+      }))
+    );
+    setEditItemState(null);
+    toast.success("Item updated");
+  }
+
+  function openEditDialog(item: MenuItem) {
+    setEditItemState({
+      item,
+      form: {
+        name: item.name,
+        description: item.description || "",
+        price: item.price.toString(),
+        ingredients: item.extras?.ingredients || "",
+        allergens: item.extras?.allergens || "",
+        calories: item.extras?.calories?.toString() || "",
+        imageFile: null
+      }
+    });
   }
 
   if (isLoading) {
@@ -335,6 +409,41 @@ export default function MenuPage() {
                     placeholder="0.00"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>Image (Optional)</Label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setNewItem({ ...newItem, imageFile: e.target.files?.[0] || null })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ingredients</Label>
+                  <Input
+                    value={newItem.ingredients}
+                    onChange={(e) => setNewItem({ ...newItem, ingredients: e.target.value })}
+                    placeholder="e.g. Flour, Water, Tomatoes, Cheese"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Allergens / Tags</Label>
+                    <Input
+                      value={newItem.allergens}
+                      onChange={(e) => setNewItem({ ...newItem, allergens: e.target.value })}
+                      placeholder="e.g. Contains Dairy, Vegan"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Calories</Label>
+                    <Input
+                      type="number"
+                      value={newItem.calories}
+                      onChange={(e) => setNewItem({ ...newItem, calories: e.target.value })}
+                      placeholder="e.g. 500"
+                    />
+                  </div>
+                </div>
               </div>
               <DialogFooter>
                 <DialogClose className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
@@ -343,9 +452,91 @@ export default function MenuPage() {
                 <DialogClose
                   className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2"
                   onClick={addItem}
+                  disabled={isUploading}
                 >
-                  {t("common.create")}
+                  {isUploading ? "Uploading..." : t("common.create")}
                 </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Item Dialog */}
+          <Dialog open={!!editItemState} onOpenChange={(open) => !open && setEditItemState(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Item</DialogTitle>
+              </DialogHeader>
+              {editItemState && (
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>{t("menu.itemName")}</Label>
+                    <Input
+                      value={editItemState.form.name}
+                      onChange={(e) => setEditItemState({ ...editItemState, form: { ...editItemState.form, name: e.target.value } })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("menu.description")}</Label>
+                    <Textarea
+                      value={editItemState.form.description}
+                      onChange={(e) => setEditItemState({ ...editItemState, form: { ...editItemState.form, description: e.target.value } })}
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("menu.price")}</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editItemState.form.price}
+                      onChange={(e) => setEditItemState({ ...editItemState, form: { ...editItemState.form, price: e.target.value } })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>New Image (Optional)</Label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setEditItemState({ ...editItemState, form: { ...editItemState.form, imageFile: e.target.files?.[0] || null } })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ingredients</Label>
+                    <Input
+                      value={editItemState.form.ingredients}
+                      onChange={(e) => setEditItemState({ ...editItemState, form: { ...editItemState.form, ingredients: e.target.value } })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Allergens / Tags</Label>
+                      <Input
+                        value={editItemState.form.allergens}
+                        onChange={(e) => setEditItemState({ ...editItemState, form: { ...editItemState.form, allergens: e.target.value } })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Calories</Label>
+                      <Input
+                        type="number"
+                        value={editItemState.form.calories}
+                        onChange={(e) => setEditItemState({ ...editItemState, form: { ...editItemState.form, calories: e.target.value } })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditItemState(null)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button
+                  onClick={saveEditedItem}
+                  disabled={isUploading}
+                >
+                  {isUploading ? "Uploading..." : "Save Changes"}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -425,10 +616,16 @@ export default function MenuPage() {
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
-                          {/* Image placeholder */}
-                          <div className="h-16 w-16 shrink-0 rounded-lg bg-muted flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/40"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                          </div>
+                          {/* Image placeholder or actual image */}
+                          {item.image_url ? (
+                            <div className="h-16 w-16 shrink-0 rounded-lg bg-muted overflow-hidden">
+                              <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+                            </div>
+                          ) : (
+                            <div className="h-16 w-16 shrink-0 rounded-lg bg-muted flex items-center justify-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/40"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
                               <h3 className="font-medium text-sm leading-tight truncate">
@@ -461,12 +658,20 @@ export default function MenuPage() {
                               {item.is_available ? t("menu.availability") : "Unavailable"}
                             </Label>
                           </div>
-                          <button
-                            onClick={() => deleteItem(currentCategory.id, item.id)}
-                            className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => openEditDialog(item)}
+                              className="text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100 p-1"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                            </button>
+                            <button
+                              onClick={() => deleteItem(currentCategory.id, item.id)}
+                              className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 p-1"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            </button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

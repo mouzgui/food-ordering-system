@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useParams } from "next/navigation";
 import confetti from "canvas-confetti";
@@ -22,6 +23,8 @@ interface MenuItem {
   price: number;
   is_available: boolean;
   category_id: string;
+  image_url?: string | null;
+  extras?: any;
 }
 
 interface CartItem {
@@ -88,6 +91,7 @@ export default function CustomerMenuPage() {
   const [addedItemId, setAddedItemId] = useState<string | null>(null);
   const [feedbackRating, setFeedbackRating] = useState<number>(0);
   const [feedbackGiven, setFeedbackGiven] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
   /* ───── Play notification sound via Web Audio API ───── */
   const playNotificationSound = () => {
@@ -563,15 +567,21 @@ export default function CustomerMenuPage() {
                   return (
                     <div
                       key={item.id}
-                      className={`rounded-2xl border bg-card p-4 transition-all duration-300 ${
+                      className={`rounded-2xl border bg-card p-4 transition-all duration-300 cursor-pointer ${
                         justAdded ? "ring-2 ring-primary/50 scale-[0.98]" : "hover:shadow-md"
                       } ${cartItem ? "border-primary/30 bg-primary/[0.02]" : ""}`}
+                      onClick={() => setSelectedItem(item)}
                     >
                       <div className="flex gap-4">
-                        {/* Food emoji placeholder */}
-                        <div className="h-[72px] w-[72px] shrink-0 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center text-2xl">
-                          {getCategoryEmoji(category.name)}
-                        </div>
+                        {item.image_url ? (
+                          <div className="h-[72px] w-[72px] shrink-0 rounded-xl overflow-hidden shadow-sm">
+                            <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="h-[72px] w-[72px] shrink-0 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center text-2xl">
+                            {getCategoryEmoji(category.name)}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <h3 className="font-semibold text-[15px] leading-tight">
@@ -586,7 +596,7 @@ export default function CustomerMenuPage() {
                           </p>
                           <div className="mt-3">
                             {cartItem ? (
-                              <div className="inline-flex items-center rounded-xl bg-primary/10 border border-primary/20">
+                              <div className="inline-flex items-center rounded-xl bg-primary/10 border border-primary/20" onClick={e => e.stopPropagation()}>
                                 <button
                                   onClick={() => updateQuantity(item.id, -1)}
                                   className="px-3 py-1.5 text-sm font-bold text-primary hover:bg-primary/10 transition-colors rounded-l-xl active:scale-90"
@@ -606,7 +616,7 @@ export default function CustomerMenuPage() {
                             ) : (
                               <button
                                 className="inline-flex items-center gap-1.5 rounded-xl bg-primary/10 text-primary px-4 py-2 text-sm font-semibold hover:bg-primary/20 transition-all active:scale-95"
-                                onClick={() => addToCart(item)}
+                                onClick={(e) => { e.stopPropagation(); addToCart(item); }}
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
                                 Add
@@ -738,6 +748,88 @@ export default function CustomerMenuPage() {
           </Sheet>
         </div>
       )}
+
+      {/* Item Details Dialog */}
+      <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+        <DialogContent className="max-w-md p-0 overflow-hidden rounded-3xl border-0">
+          {selectedItem && (
+            <div className="flex flex-col max-h-[85vh]">
+              {selectedItem.image_url ? (
+                <div className="relative h-64 w-full bg-muted shrink-0">
+                  <img src={selectedItem.image_url} alt={selectedItem.name} className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                </div>
+              ) : (
+                <div className="relative h-48 w-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0">
+                  <span className="text-6xl">{getCategoryEmoji(data.categories.find(c => c.id === selectedItem.category_id)?.name || "")}</span>
+                </div>
+              )}
+              
+              <div className="p-6 overflow-y-auto">
+                <div className="flex justify-between items-start gap-4">
+                  <h2 className="text-2xl font-bold leading-tight">{selectedItem.name}</h2>
+                  <span className="text-xl font-bold text-primary shrink-0">${selectedItem.price.toFixed(2)}</span>
+                </div>
+                
+                <p className="mt-3 text-muted-foreground">{selectedItem.description}</p>
+                
+                {selectedItem.extras && Object.keys(selectedItem.extras).length > 0 && (
+                  <div className="mt-6 space-y-4 bg-muted/30 p-4 rounded-2xl border">
+                    {selectedItem.extras.ingredients && (
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Ingredients</h4>
+                        <p className="text-sm">{selectedItem.extras.ingredients}</p>
+                      </div>
+                    )}
+                    {(selectedItem.extras.allergens || selectedItem.extras.calories > 0) && (
+                      <div className="flex flex-wrap gap-2 pt-2 border-t">
+                        {selectedItem.extras.calories > 0 && (
+                          <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20">🔥 {selectedItem.extras.calories} kcal</Badge>
+                        )}
+                        {selectedItem.extras.allergens && selectedItem.extras.allergens.split(',').map((tag: string, i: number) => (
+                          <Badge key={i} variant="outline" className="border-primary/20 text-primary">{tag.trim()}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                <div className="mt-8">
+                  {cart.find(ci => ci.item.id === selectedItem.id) ? (
+                    <div className="flex items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 p-2">
+                      <button
+                        onClick={() => updateQuantity(selectedItem.id, -1)}
+                        className="h-12 w-12 flex items-center justify-center text-xl font-bold text-primary hover:bg-primary/10 transition-colors rounded-xl active:scale-90"
+                      >
+                        −
+                      </button>
+                      <span className="flex-1 text-xl font-bold text-primary text-center">
+                        {cart.find(ci => ci.item.id === selectedItem.id)?.quantity}
+                      </span>
+                      <button
+                        onClick={() => updateQuantity(selectedItem.id, 1)}
+                        className="h-12 w-12 flex items-center justify-center text-xl font-bold text-primary hover:bg-primary/10 transition-colors rounded-xl active:scale-90"
+                      >
+                        +
+                      </button>
+                    </div>
+                  ) : (
+                    <Button 
+                      className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg shadow-primary/25" 
+                      onClick={() => {
+                        addToCart(selectedItem);
+                        setSelectedItem(null);
+                      }}
+                    >
+                      Add to Order — ${selectedItem.price.toFixed(2)}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
