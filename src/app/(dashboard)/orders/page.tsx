@@ -122,6 +122,8 @@ export default function OrdersPage() {
     };
   }, [restaurantId]);
 
+  const [groupBy, setGroupBy] = useState<"status" | "table">("status");
+
   async function advanceOrder(orderId: string) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
@@ -157,19 +159,40 @@ export default function OrdersPage() {
     }
   }
 
+  // Active orders only
+  const activeOrders = orders.filter((o) => o.status !== "delivered" && o.status !== "cancelled");
+  
+  // Unique tables with active orders
+  const activeTables = Array.from(new Set(activeOrders.map(o => o.tables?.label || "Unknown Table")))
+    .sort((a, b) => a.localeCompare(b));
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             {t("orders.title")}
           </h1>
           <p className="mt-1 text-muted-foreground">
-            {orders.filter((o) => o.status !== "delivered" && o.status !== "cancelled").length} active orders
+            {activeOrders.length} active orders
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center rounded-lg border bg-muted/50 p-1">
+            <button
+              onClick={() => setGroupBy("status")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${groupBy === "status" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              By Status
+            </button>
+            <button
+              onClick={() => setGroupBy("table")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${groupBy === "table" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              By Table
+            </button>
+          </div>
           <div className="flex items-center gap-1.5 rounded-full bg-green-500/15 px-3 py-1.5">
             <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
             <span className="text-xs font-medium text-green-700 dark:text-green-400">
@@ -181,113 +204,166 @@ export default function OrdersPage() {
 
       {/* Kanban Board */}
       <div className="grid gap-4 lg:grid-cols-4">
-        {COLUMNS.map(({ status, color, bgGradient, icon }) => {
-          const columnOrders = orders.filter((o) => o.status === status);
+        {groupBy === "status" ? (
+          COLUMNS.map(({ status, color, bgGradient, icon }) => {
+            const columnOrders = orders.filter((o) => o.status === status);
 
-          return (
-            <div key={status} className="space-y-3">
-              {/* Column Header */}
-              <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r ${bgGradient}`}>
-                <span className="text-base">{icon}</span>
-                <h2 className="text-sm font-semibold">
-                  {t(`orders.status.${status}`)}
-                </h2>
-                <Badge variant="secondary" className="text-xs ms-auto font-bold">
-                  {columnOrders.length}
-                </Badge>
-              </div>
-
-              {/* Order Cards */}
-              <ScrollArea className="h-[calc(100vh-260px)]">
-                <div className="space-y-2 pe-2">
-                  {columnOrders.length === 0 ? (
-                    <div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">
-                      {t("orders.noOrders")}
-                    </div>
-                  ) : (
-                    columnOrders.map((order) => (
-                      <Card
-                        key={order.id}
-                        className="animate-slide-up hover-lift"
-                      >
-                        <CardHeader className="p-3 pb-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold">
-                              {order.order_number}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {timeAgo(order.created_at)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="secondary" className="text-xs">
-                              📍 {order.tables?.label || "Unknown Table"}
-                            </Badge>
-                            {order.customer_info?.name && (
-                              <span className="text-xs text-muted-foreground">
-                                {order.customer_info.name}
-                              </span>
-                            )}
-                          </div>
-                        </CardHeader>
-                        <CardContent className="px-3 pb-2">
-                          <div className="space-y-1">
-                            {order.order_items?.map((item, i) => (
-                              <div
-                                key={i}
-                                className="flex items-center justify-between text-xs"
-                              >
-                                <span className="text-muted-foreground">
-                                  {item.quantity}× {item.item_name}
-                                </span>
-                                <span className="font-medium">
-                                  ${(item.item_price * item.quantity).toFixed(2)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="mt-2 pt-2 border-t flex items-center justify-between">
-                            <span className="text-xs font-medium">
-                              {t("orders.total")}
-                            </span>
-                            <span className="text-sm font-bold text-primary">
-                              ${order.total_amount.toFixed(2)}
-                            </span>
-                          </div>
-                        </CardContent>
-                        {/* Action buttons */}
-                        {status !== "delivered" && (
-                          <div className="px-3 pb-3 flex gap-2">
-                            {NEXT_STATUS[status] && (
-                              <Button
-                                size="sm"
-                                className="flex-1 h-8 text-xs"
-                                onClick={() => advanceOrder(order.id)}
-                              >
-                                → {t(`orders.status.${NEXT_STATUS[status]}`)}
-                              </Button>
-                            )}
-                            {status === "pending" && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => cancelOrder(order.id)}
-                              >
-                                ✕
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </Card>
-                    ))
-                  )}
+            return (
+              <div key={status} className="space-y-3">
+                {/* Column Header */}
+                <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r ${bgGradient}`}>
+                  <span className="text-base">{icon}</span>
+                  <h2 className="text-sm font-semibold">
+                    {t(`orders.status.${status}`)}
+                  </h2>
+                  <Badge variant="secondary" className="text-xs ms-auto font-bold">
+                    {columnOrders.length}
+                  </Badge>
                 </div>
-              </ScrollArea>
-            </div>
-          );
-        })}
+
+                {/* Order Cards */}
+                <ScrollArea className="h-[calc(100vh-260px)]">
+                  <div className="space-y-2 pe-2">
+                    {columnOrders.length === 0 ? (
+                      <div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">
+                        {t("orders.noOrders")}
+                      </div>
+                    ) : (
+                      columnOrders.map((order) => (
+                        <OrderCard 
+                          key={order.id} 
+                          order={order} 
+                          advanceOrder={advanceOrder} 
+                          cancelOrder={cancelOrder} 
+                          t={t} 
+                        />
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            );
+          })
+        ) : (
+          activeTables.map((tableLabel) => {
+            const tableOrders = activeOrders.filter((o) => (o.tables?.label || "Unknown Table") === tableLabel);
+
+            return (
+              <div key={tableLabel} className="space-y-3">
+                {/* Column Header */}
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5">
+                  <span className="text-base">📍</span>
+                  <h2 className="text-sm font-semibold truncate">
+                    {tableLabel}
+                  </h2>
+                  <Badge variant="secondary" className="text-xs ms-auto font-bold bg-background">
+                    {tableOrders.length}
+                  </Badge>
+                </div>
+
+                {/* Order Cards */}
+                <ScrollArea className="h-[calc(100vh-260px)]">
+                  <div className="space-y-2 pe-2">
+                    {tableOrders.map((order) => (
+                      <OrderCard 
+                        key={order.id} 
+                        order={order} 
+                        advanceOrder={advanceOrder} 
+                        cancelOrder={cancelOrder} 
+                        t={t} 
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
+  );
+}
+
+// Extracted OrderCard component to reuse in both views
+function OrderCard({ order, advanceOrder, cancelOrder, t }: any) {
+  const statusConfig = COLUMNS.find(c => c.status === order.status);
+  
+  return (
+    <Card className="animate-slide-up hover-lift">
+      <CardHeader className="p-3 pb-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-bold flex items-center gap-2">
+            {order.order_number}
+            {order.status !== 'pending' && statusConfig && (
+              <Badge variant="outline" className={`text-[10px] uppercase font-bold py-0 h-5 border-${statusConfig.color.replace('bg-', '')}`}>
+                {t(`orders.status.${order.status}`)}
+              </Badge>
+            )}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {timeAgo(order.created_at)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <Badge variant="secondary" className="text-xs">
+            📍 {order.tables?.label || "Unknown Table"}
+          </Badge>
+          {order.customer_info?.name && (
+            <span className="text-xs text-muted-foreground">
+              {order.customer_info.name}
+            </span>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="px-3 pb-2">
+        <div className="space-y-1">
+          {order.order_items?.map((item: any, i: number) => (
+            <div
+              key={i}
+              className="flex items-center justify-between text-xs"
+            >
+              <span className="text-muted-foreground">
+                {item.quantity}× {item.item_name}
+              </span>
+              <span className="font-medium">
+                ${(item.item_price * item.quantity).toFixed(2)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 pt-2 border-t flex items-center justify-between">
+          <span className="text-xs font-medium">
+            {t("orders.total")}
+          </span>
+          <span className="text-sm font-bold text-primary">
+            ${order.total_amount.toFixed(2)}
+          </span>
+        </div>
+      </CardContent>
+      {/* Action buttons */}
+      {order.status !== "delivered" && order.status !== "cancelled" && (
+        <div className="px-3 pb-3 flex gap-2">
+          {NEXT_STATUS[order.status] && (
+            <Button
+              size="sm"
+              className="flex-1 h-8 text-xs"
+              onClick={() => advanceOrder(order.id)}
+            >
+              → {t(`orders.status.${NEXT_STATUS[order.status]}`)}
+            </Button>
+          )}
+          {order.status === "pending" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => cancelOrder(order.id)}
+            >
+              ✕
+            </Button>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }

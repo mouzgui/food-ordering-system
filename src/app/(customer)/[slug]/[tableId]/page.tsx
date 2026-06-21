@@ -14,6 +14,7 @@ import { useParams } from "next/navigation";
 import confetti from "canvas-confetti";
 import { fetchCustomerMenu, submitOrder } from "./actions";
 import { createClient } from "@/lib/supabase/client";
+import { useCustomerStore } from "@/stores/customer-store";
 
 /* ───── Types ───── */
 interface MenuItem {
@@ -25,11 +26,6 @@ interface MenuItem {
   category_id: string;
   image_url?: string | null;
   extras?: any;
-}
-
-interface CartItem {
-  item: MenuItem;
-  quantity: number;
 }
 
 interface Category {
@@ -79,19 +75,38 @@ export default function CustomerMenuPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [customerName, setCustomerName] = useState("");
-  const [orderPlaced, setOrderPlaced] = useState(false);
-  const [orderId, setOrderId] = useState<string | null>(null);
-  const [orderNumber, setOrderNumber] = useState<string | null>(null);
-  const [orderStatus, setOrderStatus] = useState<string>("pending");
+  // Search State
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Global Customer State
+  const store = useCustomerStore();
+  const cart = store.cart;
+  const itemCount = store.getItemCount();
+  const subtotal = store.getSubtotal();
+  const { 
+    customerName, 
+    setCustomerName, 
+    orderPlaced, 
+    activeOrderId: orderId, 
+    activeOrderNumber: orderNumber, 
+    activeOrderStatus: orderStatus, 
+    setActiveOrder, 
+    updateOrderStatus, 
+    clearActiveOrder 
+  } = store;
+
+  // Local UI State
   const [cartOpen, setCartOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [addedItemId, setAddedItemId] = useState<string | null>(null);
   const [feedbackRating, setFeedbackRating] = useState<number>(0);
   const [feedbackGiven, setFeedbackGiven] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+  
+  // Hydration fix for Zustand persist
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   /* ───── Play notification sound via Web Audio API ───── */
   const playNotificationSound = () => {
@@ -169,7 +184,7 @@ export default function CustomerMenuPage() {
         },
         (payload: any) => {
           if (payload.new?.status && payload.new.status !== orderStatus) {
-            setOrderStatus(payload.new.status);
+            updateOrderStatus(payload.new.status);
             playNotificationSound();
             
             const statusMessages: Record<string, string> = {
@@ -202,19 +217,9 @@ export default function CustomerMenuPage() {
   }, [orderId]);
 
   /* ───── Cart Helpers ───── */
-  const itemCount = cart.reduce((sum, ci) => sum + ci.quantity, 0);
-  const subtotal = cart.reduce((sum, ci) => sum + ci.item.price * ci.quantity, 0);
-
-  function addToCart(item: MenuItem) {
-    setCart((prev) => {
-      const existing = prev.find((ci) => ci.item.id === item.id);
-      if (existing) {
-        return prev.map((ci) =>
-          ci.item.id === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci
-        );
-      }
-      return [...prev, { item, quantity: 1 }];
-    });
+  function addToCart(item: any) {
+    if (!data) return;
+    store.addToCart(item, data.restaurant.id, data.table.id);
 
     // Visual feedback
     setAddedItemId(item.id);
@@ -222,13 +227,7 @@ export default function CustomerMenuPage() {
   }
 
   function updateQuantity(itemId: string, delta: number) {
-    setCart((prev) =>
-      prev
-        .map((ci) =>
-          ci.item.id === itemId ? { ...ci, quantity: ci.quantity + delta } : ci
-        )
-        .filter((ci) => ci.quantity > 0)
-    );
+    store.updateQuantity(itemId, delta);
   }
 
   async function placeOrder() {
@@ -258,15 +257,13 @@ export default function CustomerMenuPage() {
       return;
     }
 
-    setOrderPlaced(true);
     setCartOpen(false);
-    setOrderNumber(res.orderNumber || null);
-    if (res.orderId) setOrderId(res.orderId);
+    setActiveOrder(res.orderId, res.orderNumber || "");
     toast.success(t("customer.orderPlaced"));
   }
 
   /* ───── Loading State ───── */
-  if (isLoading) {
+  if (!hydrated || isLoading) {
     return (
       <div className="flex flex-col h-screen items-center justify-center gap-4 bg-gradient-to-b from-primary/5 to-background">
         <div className="relative">
@@ -358,11 +355,7 @@ export default function CustomerMenuPage() {
           variant="outline"
           className="mt-12 rounded-xl h-12 px-8"
           onClick={() => {
-            setOrderPlaced(false);
-            setCart([]);
-            setOrderId(null);
-            setOrderNumber(null);
-            setOrderStatus("pending");
+            clearActiveOrder();
             setFeedbackGiven(false);
             setFeedbackRating(0);
           }}
@@ -478,11 +471,7 @@ export default function CustomerMenuPage() {
             variant="outline"
             className="mt-8 rounded-xl"
             onClick={() => {
-              setOrderPlaced(false);
-              setCart([]);
-              setOrderId(null);
-              setOrderNumber(null);
-              setOrderStatus("pending");
+              clearActiveOrder();
             }}
           >
             Order More
@@ -513,43 +502,66 @@ export default function CustomerMenuPage() {
               📍 {data.table.label}
             </Badge>
           </div>
+          {/* Search Bar */}
+          <div className="mt-5 relative">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+            <Input 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search dishes, ingredients, or tags..." 
+              className="w-full pl-10 h-12 rounded-2xl bg-background/80 backdrop-blur-sm border-primary/10 shadow-sm"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Category Navigation — horizontal scroll pills */}
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b">
-        <div className="flex gap-2 overflow-x-auto px-5 py-3 no-scrollbar">
-          {data.categories.map((cat) => {
-            const isActive = activeCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  setActiveCategory(cat.id);
-                  document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-95 ${
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                }`}
-              >
-                {getCategoryEmoji(cat.name)} {cat.name}
-              </button>
-            );
-          })}
+      {/* Category Navigation — horizontal scroll pills (hide if searching) */}
+      {!searchQuery && (
+        <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b">
+          <div className="flex gap-2 overflow-x-auto px-5 py-3 no-scrollbar">
+            {data.categories.map((cat) => {
+              const isActive = activeCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setActiveCategory(cat.id);
+                    document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-95 ${
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  }`}
+                >
+                  {getCategoryEmoji(cat.name)} {cat.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Menu Items */}
       <div className="space-y-8 px-5 pt-6">
         {data.categories.map((category) => {
-          const categoryItems = data.items.filter(
-            (i) => i.category_id === category.id && i.is_available
-          );
-          const unavailableItems = data.items.filter(
-            (i) => i.category_id === category.id && !i.is_available
-          );
+          let categoryItems = data.items.filter((i) => i.category_id === category.id && i.is_available);
+          let unavailableItems = data.items.filter((i) => i.category_id === category.id && !i.is_available);
+          
+          if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const filterItem = (i: any) => 
+              i.name.toLowerCase().includes(query) || 
+              (i.description && i.description.toLowerCase().includes(query)) ||
+              (i.extras?.ingredients && i.extras.ingredients.toLowerCase().includes(query)) ||
+              (i.extras?.allergens && i.extras.allergens.toLowerCase().includes(query));
+            
+            categoryItems = categoryItems.filter(filterItem);
+            unavailableItems = unavailableItems.filter(filterItem);
+          }
+
           if (categoryItems.length === 0 && unavailableItems.length === 0) return null;
 
           return (
