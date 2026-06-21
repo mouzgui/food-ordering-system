@@ -26,38 +26,38 @@ interface WaiterOrder {
   order_items?: { item_name: string; quantity: number; item_price: number }[];
 }
 
-const STATUS_META: Record<
-  OrderStatus,
-  { title: string; next?: OrderStatus; action?: string; icon: string }
-> = {
-  pending: { title: "Pending", icon: "🛎️" },
-  confirmed: { title: "Confirmed", icon: "📋" },
-  accepted: { title: "Accepted", icon: "📥" },
-  preparing: { title: "Preparing", icon: "👨‍🍳" },
-  ready: {
-    title: "Ready to Serve",
-    next: "served",
-    action: "Serve",
-    icon: "✅",
-  },
-  served: {
-    title: "Served",
-    next: "delivered",
-    action: "Mark Delivered",
-    icon: "🍽️",
-  },
-  delivered: { title: "Delivered", icon: "🏁" },
-  cancelled: { title: "Cancelled", icon: "✕" },
-};
+function ElapsedTimer({ startTime, status }: { startTime: string; status: OrderStatus }) {
+  const [elapsed, setElapsed] = useState(0);
 
-function elapsedSince(dateStr?: string | null) {
-  if (!dateStr) return "Not started";
-  const minutes = Math.floor(
-    (Date.now() - new Date(dateStr).getTime()) / 60000,
+  useEffect(() => {
+    if (status === "delivered") return; // Stop timer when delivered
+
+    const start = new Date(startTime).getTime();
+    const updateTimer = () => {
+      setElapsed(Math.floor((Date.now() - start) / 60000));
+    };
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, [startTime, status]);
+
+  if (status === "delivered") {
+    return <span className="text-muted-foreground font-bold font-mono">--</span>;
+  }
+
+  const isWarning = elapsed >= 5 && elapsed < 10;
+  const isCritical = elapsed >= 10;
+
+  return (
+    <span
+      className={`font-mono text-sm font-bold ${
+        isCritical ? "text-red-500 animate-pulse" : isWarning ? "text-orange-500" : "text-muted-foreground"
+      }`}
+    >
+      {elapsed}m
+    </span>
   );
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m`;
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
 export default function WaiterPage() {
@@ -159,19 +159,11 @@ export default function WaiterPage() {
     };
   }, [restaurantId, supabase]);
 
-  const visibleColumns = useMemo(
-    () =>
-      WAITER_VISIBLE_STATUSES.map((status) => ({
-        status,
-        ...STATUS_META[status],
-      })),
-    [],
-  );
-
   async function handleTransition(orderId: string, nextStatus: OrderStatus) {
     const currentOrder = orders.find((order) => order.id === orderId);
     if (!currentOrder) return;
 
+    // Optimistic update
     setOrders((prev) =>
       prev.map((order) =>
         order.id === orderId ? { ...order, status: nextStatus } : order,
@@ -191,15 +183,22 @@ export default function WaiterPage() {
       return;
     }
 
-    toast.success(
-      `${currentOrder.order_number} moved to ${STATUS_META[nextStatus].title}`,
-    );
+    if (nextStatus === "served") {
+      toast.success(`${currentOrder.order_number} served to table!`);
+    } else if (nextStatus === "delivered") {
+      toast.success(`${currentOrder.order_number} delivery completed!`);
+    }
   }
+
+  // Column filtering
+  const readyOrders = orders.filter((o) => o.status === "ready");
+  const servedOrders = orders.filter((o) => o.status === "served");
+  const deliveredOrders = orders.filter((o) => o.status === "delivered");
 
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        Loading waiter queue...
+        Loading Waiter Display System...
       </div>
     );
   }
@@ -207,112 +206,158 @@ export default function WaiterPage() {
   if (role === "kitchen_staff") {
     return (
       <div className="flex h-64 items-center justify-center">
-        Waiter access is not available for kitchen staff accounts.
+        Waiter access is restricted for kitchen staff.
       </div>
     );
   }
 
+  const renderTicket = (order: WaiterOrder, actionName: string, nextStatus: OrderStatus | null, colorClass: string) => (
+    <Card key={order.id} className={`glass-panel overflow-hidden border-t-4 ${colorClass}`}>
+      <CardHeader className="p-4 pb-2 bg-muted/20">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <CardTitle className="text-xl font-bold font-mono">
+              {order.order_number}
+            </CardTitle>
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+              <Badge variant="secondary" className="text-sm px-2 py-0.5 rounded-sm bg-primary/10 text-primary border border-primary/20">
+                📍 Table {order.tables?.number || order.tables?.label || "?"}
+              </Badge>
+              {order.customer_info?.name && (
+                <span className="text-xs font-medium text-muted-foreground truncate max-w-[120px]">
+                  👤 {order.customer_info.name}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+             <ElapsedTimer startTime={order.ready_at || order.created_at} status={order.status} />
+          </div>
+        </div>
+      </CardHeader>
+      
+      <div className="border-t border-dashed border-white/20 my-0" />
+      
+      <CardContent className="p-0 flex flex-col">
+        <div className="p-4 space-y-3 flex-1">
+          {order.order_items?.map((item, index) => (
+            <div
+              key={`${order.id}-${index}`}
+              className="flex items-start gap-3"
+            >
+              <span className="font-mono font-bold text-lg leading-none mt-0.5 text-primary min-w-[28px]">
+                {item.quantity}x
+              </span>
+              <span className="font-medium text-base leading-tight">
+                {item.item_name}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {nextStatus && (
+          <div className="p-4 pt-2 mt-auto">
+            <Button
+              size="lg"
+              className={`w-full font-bold text-sm h-14 uppercase tracking-wide hover-lift transition-all shadow-lg ${
+                nextStatus === 'served' 
+                  ? 'bg-green-600 hover:bg-green-500 text-white' 
+                  : nextStatus === 'delivered' 
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                  : ''
+              }`}
+              onClick={() => handleTransition(order.id, nextStatus)}
+            >
+              <span className="flex items-center gap-2">
+                {nextStatus === 'served' ? '🍽️' : '🏁'} {actionName}
+              </span>
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-end justify-between gap-4">
+    <div className="h-[calc(100vh-6rem)] flex flex-col space-y-4 animate-fade-in">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Waiter Queue</h1>
-          <p className="mt-1 text-muted-foreground">
-            Track ready orders, serve tables, and close deliveries.
+          <h1 className="text-3xl font-bold tracking-tight">Waiter Dispatch</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Track ready orders, serve tables, and manage deliveries.
           </p>
         </div>
-        <div className="rounded-full bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400">
-          {orders.length} delivery-stage orders
+        <div className="flex items-center gap-2 rounded-full bg-green-500/10 px-4 py-2 border border-green-500/20">
+          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-sm font-semibold text-green-700 dark:text-green-400">
+            {readyOrders.length} Actions Required
+          </span>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {visibleColumns.map(({ status, title, action, next, icon }) => {
-          const columnOrders = orders.filter(
-            (order) => order.status === status,
-          );
-
-          return (
-            <div key={status} className="space-y-3">
-              <div className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-2.5">
-                <span>{icon}</span>
-                <h2 className="text-sm font-semibold">{title}</h2>
-                <Badge
-                  variant="secondary"
-                  className="ms-auto text-xs font-bold"
-                >
-                  {columnOrders.length}
-                </Badge>
-              </div>
-
-              <ScrollArea className="h-[calc(100vh-260px)]">
-                <div className="space-y-2 pe-2">
-                  {columnOrders.length === 0 ? (
-                    <div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">
-                      No orders
-                    </div>
-                  ) : (
-                    columnOrders.map((order) => (
-                      <Card key={order.id}>
-                        <CardHeader className="p-3 pb-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <CardTitle className="text-sm">
-                              {order.order_number}
-                            </CardTitle>
-                            <Badge variant="secondary" className="text-xs">
-                              {order.tables?.label || "Unknown Table"}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{order.customer_info?.name || "Guest"}</span>
-                            <span>
-                              Ready for {elapsedSince(order.ready_at)}
-                            </span>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-3 px-3 pb-3">
-                          <div className="space-y-1">
-                            {order.order_items?.map((item, index) => (
-                              <div
-                                key={`${order.id}-${index}`}
-                                className="flex items-center justify-between text-xs"
-                              >
-                                <span className="text-muted-foreground">
-                                  {item.quantity}x {item.item_name}
-                                </span>
-                                <span className="font-medium">
-                                  $
-                                  {(item.item_price * item.quantity).toFixed(2)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-
-                          <div className="flex items-center justify-between border-t pt-2">
-                            <span className="text-xs font-medium">Total</span>
-                            <span className="text-sm font-bold text-primary">
-                              ${order.total_amount.toFixed(2)}
-                            </span>
-                          </div>
-
-                          {next && action && (
-                            <Button
-                              size="sm"
-                              className="w-full"
-                              onClick={() => handleTransition(order.id, next)}
-                            >
-                              {action}
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
+      <div className="flex-1 grid gap-4 lg:grid-cols-3 min-h-0">
+        {/* READY TO SERVE */}
+        <div className="flex flex-col bg-muted/10 rounded-2xl border border-white/5 overflow-hidden ring-1 ring-green-500/20 shadow-[0_0_30px_rgba(34,197,94,0.1)] lg:col-span-1">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-500/20 to-transparent border-b border-green-500/20">
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <span className="text-green-500">🛎️</span> Ready to Serve
+            </h2>
+            <Badge variant="secondary" className="font-mono text-sm bg-green-500 text-white border-none">
+              {readyOrders.length}
+            </Badge>
+          </div>
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4 pb-4">
+              {readyOrders.length === 0 ? (
+                <div className="text-center p-8 text-muted-foreground border border-dashed rounded-xl border-white/10">No orders waiting</div>
+              ) : (
+                readyOrders.map((order) => renderTicket(order, "Serve to Table", "served", "border-t-green-500"))
+              )}
             </div>
-          );
-        })}
+          </ScrollArea>
+        </div>
+
+        {/* SERVED / EN ROUTE */}
+        <div className="flex flex-col bg-muted/10 rounded-2xl border border-white/5 overflow-hidden">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-500/10 to-transparent border-b border-white/5">
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <span className="text-blue-500">🚶</span> En Route / Served
+            </h2>
+            <Badge variant="secondary" className="font-mono text-sm bg-background/50">
+              {servedOrders.length}
+            </Badge>
+          </div>
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4 pb-4">
+              {servedOrders.length === 0 ? (
+                <div className="text-center p-8 text-muted-foreground border border-dashed rounded-xl border-white/10">No active deliveries</div>
+              ) : (
+                servedOrders.map((order) => renderTicket(order, "Mark Completed", "delivered", "border-t-blue-500 opacity-90"))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* DELIVERED (RECENT) */}
+        <div className="flex flex-col bg-muted/10 rounded-2xl border border-white/5 overflow-hidden">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-muted-foreground/10 to-transparent border-b border-white/5">
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <span className="text-muted-foreground">🏁</span> Recently Completed
+            </h2>
+            <Badge variant="secondary" className="font-mono text-sm bg-background/50">
+              {deliveredOrders.length}
+            </Badge>
+          </div>
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4 pb-4">
+              {deliveredOrders.length === 0 ? (
+                <div className="text-center p-8 text-muted-foreground border border-dashed rounded-xl border-white/10">No completed orders today</div>
+              ) : (
+                deliveredOrders.slice(0, 20).map((order) => renderTicket(order, "", null, "border-t-muted-foreground opacity-60 hover:opacity-100 transition-opacity grayscale hover:grayscale-0"))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
       </div>
     </div>
   );

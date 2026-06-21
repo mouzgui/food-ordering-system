@@ -152,3 +152,48 @@ export async function toggleItemAvailability(id: string, isAvailable: boolean) {
   if (error) return { error: error.message };
   return { success: true };
 }
+
+export async function generateTemplate(restaurantId: string, templateType: 'pizzeria' | 'cafe') {
+  const supabase = await createClient() as any;
+  
+  let categoriesData: { name: string; desc: string }[] = [];
+  if (templateType === 'pizzeria') {
+    categoriesData = [
+      { name: "Wood-Fired Pizzas", desc: "Authentic Neapolitan style pizzas" },
+      { name: "Starters", desc: "Perfect for sharing" },
+      { name: "Drinks", desc: "Cold beverages" }
+    ];
+  } else if (templateType === 'cafe') {
+    categoriesData = [
+      { name: "Hot Beverages", desc: "Freshly roasted coffee" },
+      { name: "Cold Brews", desc: "Refreshing iced drinks" },
+      { name: "Pastries", desc: "Baked fresh daily" }
+    ];
+  }
+
+  const categories = [];
+  for (let i = 0; i < categoriesData.length; i++) {
+    const { data } = await supabase
+      .from("categories")
+      .insert([{ restaurant_id: restaurantId, name: categoriesData[i].name, description: categoriesData[i].desc, sort_order: i }])
+      .select().single();
+    if (data) categories.push(data);
+  }
+
+  if (templateType === 'pizzeria' && categories.length > 0) {
+    await supabase.from("menu_items").insert([
+      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Margherita", description: "Tomato sauce, fresh mozzarella, basil", price: 12.00, is_available: true, sort_order: 0 },
+      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Pepperoni", description: "Tomato sauce, mozzarella, spicy pepperoni", price: 14.50, is_available: true, sort_order: 1 },
+      { category_id: categories[1].id, restaurant_id: restaurantId, name: "Garlic Bread", description: "Wood-fired bread with garlic butter", price: 6.50, is_available: true, sort_order: 0 },
+      { category_id: categories[2].id, restaurant_id: restaurantId, name: "Craft Cola", description: "Artisan cola", price: 3.50, is_available: true, sort_order: 0 },
+    ]);
+  } else if (templateType === 'cafe' && categories.length > 0) {
+     await supabase.from("menu_items").insert([
+      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Espresso", description: "Double shot", price: 3.50, is_available: true, sort_order: 0 },
+      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Cappuccino", description: "Espresso with steamed milk", price: 4.50, is_available: true, sort_order: 1 },
+      { category_id: categories[2].id, restaurant_id: restaurantId, name: "Croissant", description: "Butter croissant", price: 3.00, is_available: true, sort_order: 0 },
+    ]);
+  }
+
+  return { success: true, error: null };
+}
