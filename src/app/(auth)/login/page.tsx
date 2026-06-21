@@ -33,8 +33,14 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
+      
+      // If the user entered a username instead of an email, format it
+      const formattedEmail = email.includes("@") 
+        ? email 
+        : `${email.toLowerCase()}@staff.local`;
+
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: formattedEmail,
         password,
       });
 
@@ -83,13 +89,13 @@ export default function LoginPage() {
       <form onSubmit={onSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="login-email">{t("auth.email")}</Label>
+            <Label htmlFor="login-email">{t("auth.email")} or Username</Label>
             <Input
               id="login-email"
-              type="email"
-              placeholder="you@restaurant.com"
+              type="text"
+              placeholder="you@restaurant.com or ahmed_kitchen"
               required
-              autoComplete="email"
+              autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
