@@ -34,10 +34,11 @@ export default function LoginPage() {
     try {
       const supabase = createClient();
       
-      // If the user entered a username instead of an email, format it
+      // If the user entered a username instead of an email, format it (and sanitize it just like we do in staff creation)
+      const safeUsername = email.toLowerCase().replace(/[^a-z0-9_.-]/g, "");
       const formattedEmail = email.includes("@") 
         ? email 
-        : `${email.toLowerCase()}@staff.local`;
+        : `${safeUsername}@staff.local`;
 
       const { error } = await supabase.auth.signInWithPassword({
         email: formattedEmail,
