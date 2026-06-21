@@ -39,7 +39,11 @@ interface CustomerState {
   
   setCustomerName: (name: string) => void;
   
-  setActiveOrder: (orderId: string, orderNumber: string) => void;
+  setActiveOrder: (
+    orderId: string,
+    orderNumber: string,
+    initialStatus?: string
+  ) => void;
   updateOrderStatus: (status: string) => void;
   clearActiveOrder: () => void;
   
@@ -104,11 +108,11 @@ export const useCustomerStore = create<CustomerState>()(
         set({ customerName: name });
       },
 
-      setActiveOrder: (orderId, orderNumber) => {
+      setActiveOrder: (orderId, orderNumber, initialStatus = "pending") => {
         set({
           activeOrderId: orderId,
           activeOrderNumber: orderNumber,
-          activeOrderStatus: "pending",
+          activeOrderStatus: initialStatus,
           orderPlaced: true,
           cart: [], // Clear cart when order is placed
         });

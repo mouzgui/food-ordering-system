@@ -1,27 +1,28 @@
 "use server";
 
+import { requireRole } from "@/lib/auth/permissions";
+import { normalizeRestaurantSettings } from "@/lib/restaurant-settings";
 import { createClient } from "@/lib/supabase/server";
+import type { RestaurantSettings } from "@/types";
 
 export async function fetchSettings() {
   const supabase = await createClient() as any;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-
-  const { data: member } = await supabase
-    .from("restaurant_members")
-    .select("restaurant_id")
-    .eq("user_id", user.id)
-    .single() as any;
-
-  if (!member) return { error: "Restaurant not found" };
+  const membership = await requireRole(["owner", "manager"]);
 
   const { data: restaurant } = await supabase
     .from("restaurants")
     .select("*")
-    .eq("id", member.restaurant_id)
+    .eq("id", membership.restaurantId)
     .single() as any;
 
-  return { restaurant };
+  if (!restaurant) return { error: "Restaurant not found" };
+
+  return {
+    restaurant: {
+      ...restaurant,
+      settings: normalizeRestaurantSettings(restaurant.settings),
+    },
+  };
 }
 
 export async function updateSettings(
@@ -33,10 +34,16 @@ export async function updateSettings(
     address: string;
     currency: string;
     timezone: string;
-    settings: any;
+    settings: RestaurantSettings;
   }
 ) {
   const supabase = await createClient() as any;
+  const membership = await requireRole(["owner", "manager"]);
+
+  if (membership.restaurantId !== id) {
+    return { error: "You do not have access to this restaurant" };
+  }
+
   const { error } = await supabase
     .from("restaurants")
     .update({
@@ -46,7 +53,7 @@ export async function updateSettings(
       address: data.address,
       currency: data.currency,
       timezone: data.timezone,
-      settings: data.settings,
+      settings: normalizeRestaurantSettings(data.settings),
     } as Record<string, any>)
     .eq("id", id);
 

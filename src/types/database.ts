@@ -18,12 +18,14 @@ export type Json =
 export type OrderStatus =
   | "pending"
   | "confirmed"
+  | "accepted"
   | "preparing"
   | "ready"
+  | "served"
   | "delivered"
   | "cancelled";
 
-export type StaffRole = "owner" | "manager" | "waiter";
+export type StaffRole = "owner" | "manager" | "kitchen_staff" | "waiter";
 
 export interface Database {
   public: {
@@ -205,6 +207,19 @@ export interface Database {
           total_amount: number;
           notes: string | null;
           customer_info: Json | null;
+          accepted_by_member_id: string | null;
+          accepted_at: string | null;
+          preparing_started_by_member_id: string | null;
+          preparing_started_at: string | null;
+          ready_by_member_id: string | null;
+          ready_at: string | null;
+          served_by_member_id: string | null;
+          served_at: string | null;
+          delivered_by_member_id: string | null;
+          delivered_at: string | null;
+          current_assignee_member_id: string | null;
+          priority: string;
+          due_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -217,6 +232,19 @@ export interface Database {
           total_amount: number;
           notes?: string | null;
           customer_info?: Json | null;
+          accepted_by_member_id?: string | null;
+          accepted_at?: string | null;
+          preparing_started_by_member_id?: string | null;
+          preparing_started_at?: string | null;
+          ready_by_member_id?: string | null;
+          ready_at?: string | null;
+          served_by_member_id?: string | null;
+          served_at?: string | null;
+          delivered_by_member_id?: string | null;
+          delivered_at?: string | null;
+          current_assignee_member_id?: string | null;
+          priority?: string;
+          due_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -229,6 +257,19 @@ export interface Database {
           total_amount?: number;
           notes?: string | null;
           customer_info?: Json | null;
+          accepted_by_member_id?: string | null;
+          accepted_at?: string | null;
+          preparing_started_by_member_id?: string | null;
+          preparing_started_at?: string | null;
+          ready_by_member_id?: string | null;
+          ready_at?: string | null;
+          served_by_member_id?: string | null;
+          served_at?: string | null;
+          delivered_by_member_id?: string | null;
+          delivered_at?: string | null;
+          current_assignee_member_id?: string | null;
+          priority?: string;
+          due_at?: string | null;
           updated_at?: string;
         };
       };
@@ -261,6 +302,47 @@ export interface Database {
           item_price?: number;
           quantity?: number;
           notes?: string | null;
+        };
+      };
+      order_events: {
+        Row: {
+          id: string;
+          restaurant_id: string;
+          order_id: string;
+          member_id: string | null;
+          actor_user_id: string | null;
+          actor_role: StaffRole | null;
+          event_type: string;
+          from_status: OrderStatus | null;
+          to_status: OrderStatus | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          restaurant_id: string;
+          order_id: string;
+          member_id?: string | null;
+          actor_user_id?: string | null;
+          actor_role?: StaffRole | null;
+          event_type: string;
+          from_status?: OrderStatus | null;
+          to_status?: OrderStatus | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          restaurant_id?: string;
+          order_id?: string;
+          member_id?: string | null;
+          actor_user_id?: string | null;
+          actor_role?: StaffRole | null;
+          event_type?: string;
+          from_status?: OrderStatus | null;
+          to_status?: OrderStatus | null;
+          metadata?: Json;
+          created_at?: string;
         };
       };
     };
@@ -302,3 +384,6 @@ export type OrderUpdate = Database["public"]["Tables"]["orders"]["Update"];
 
 export type OrderItem = Database["public"]["Tables"]["order_items"]["Row"];
 export type OrderItemInsert = Database["public"]["Tables"]["order_items"]["Insert"];
+
+export type OrderEvent = Database["public"]["Tables"]["order_events"]["Row"];
+export type OrderEventInsert = Database["public"]["Tables"]["order_events"]["Insert"];

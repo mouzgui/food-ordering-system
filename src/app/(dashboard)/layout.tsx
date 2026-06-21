@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getDashboardNav, ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/shared/logo";
 import { LocaleSwitcher } from "@/components/shared/locale-switcher";
@@ -19,9 +20,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DASHBOARD_NAV } from "@/lib/constants";
 import { fetchUserRestaurantId } from "./orders/actions";
 import { toast } from "sonner";
+import { ROLE_HOME_ROUTE, type NavItem } from "@/types";
+import type { StaffRole } from "@/types/database";
 
 // Inline SVG icons to avoid import issues
 const icons: Record<string, React.ReactNode> = {
@@ -31,10 +33,19 @@ const icons: Record<string, React.ReactNode> = {
   QrCode: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>,
   Users: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
   Settings: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
+  ChefHat: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 14h12"/><path d="M6 18h12"/><path d="M7 14a5 5 0 1 1 10 0"/><path d="M5 10a3 3 0 0 1 4-2.83A4 4 0 0 1 17 7a3 3 0 0 1 2 5.65V18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/></svg>,
+  Serving: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a5 5 0 0 1 5 5H7a5 5 0 0 1 5-5Z"/><path d="M3 10h18"/><path d="M5 10v2a7 7 0 0 0 14 0v-2"/><path d="M12 17v2"/><path d="M8 21h8"/></svg>,
+  ChartBar: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16V8"/><path d="M12 16V5"/><path d="M17 16v-3"/></svg>,
   Menu: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
   X: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
   LogOut: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
 };
+
+function canAccessPath(pathname: string, navItems: NavItem[]) {
+  return navItems.some(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -48,6 +59,8 @@ export default function DashboardLayout({
   const [userEmail, setUserEmail] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
   const [initials, setInitials] = useState("TF");
+  const [role, setRole] = useState<StaffRole | null>(null);
+  const [navItems, setNavItems] = useState<NavItem[]>([]);
 
   useEffect(() => {
     async function loadUser() {
@@ -60,11 +73,22 @@ export default function DashboardLayout({
       if (user) {
         const { data: member } = await supabase
           .from("restaurant_members")
-          .select("restaurant_id, restaurants(name)")
+          .select("restaurant_id, role, restaurants(name)")
           .eq("user_id", user.id)
+          .eq("is_active", true)
           .limit(1)
           .single() as any;
         
+        if (member?.role) {
+          const memberRole = member.role as StaffRole;
+          setRole(memberRole);
+          const nextNav = getDashboardNav(memberRole);
+          setNavItems(nextNav);
+          if (!canAccessPath(pathname, nextNav)) {
+            router.replace(ROLE_HOME_ROUTE[memberRole]);
+          }
+        }
+
         if (member?.restaurants) {
           const r = member.restaurants as unknown as { name: string };
           setRestaurantName(r.name);
@@ -72,7 +96,7 @@ export default function DashboardLayout({
       }
     }
     loadUser();
-  }, []);
+  }, [pathname, router]);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -136,6 +160,12 @@ export default function DashboardLayout({
             const name = data?.customer_info?.name || "Guest";
             const num = data?.order_number || "";
             const amount = data?.total_amount?.toFixed(2) || "0.00";
+            const destination =
+              role === "kitchen_staff"
+                ? ROUTES.KITCHEN
+                : role === "waiter"
+                  ? ROUTES.WAITER
+                  : ROUTES.ORDERS;
 
             toast.success(
               `🔔 New Order #${num}`,
@@ -143,8 +173,8 @@ export default function DashboardLayout({
                 description: `${name} at ${table} — $${amount}`,
                 duration: 8000,
                 action: {
-                  label: "View Orders",
-                  onClick: () => router.push("/orders"),
+                  label: "Open Queue",
+                  onClick: () => router.push(destination),
                 },
               }
             );
@@ -161,7 +191,7 @@ export default function DashboardLayout({
         supabase.removeChannel(channel);
       }
     };
-  }, [playNotificationSound, router]);
+  }, [playNotificationSound, role, router]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -199,7 +229,7 @@ export default function DashboardLayout({
           {/* Navigation */}
           <ScrollArea className="flex-1 px-3 py-4">
             <nav className="space-y-1">
-              {DASHBOARD_NAV.map((item) => {
+              {navItems.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
                   <Link
@@ -214,7 +244,7 @@ export default function DashboardLayout({
                     )}
                   >
                     <span className={cn(isActive && "text-sidebar-primary")}>
-                      {icons[item.icon]}
+                      {item.icon ? icons[item.icon] : null}
                     </span>
                     {t(item.title)}
                   </Link>
@@ -268,13 +298,17 @@ export default function DashboardLayout({
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem>
-                <Link href="/settings" className="flex w-full items-center gap-2">
-                  {icons.Settings}
-                  {t("nav.settings")}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {(role === "owner" || role === "manager") && (
+                <>
+                  <DropdownMenuItem>
+                    <Link href="/settings" className="flex w-full items-center gap-2">
+                      {icons.Settings}
+                      {t("nav.settings")}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
                 <span className="flex items-center gap-2">
                   {icons.LogOut}

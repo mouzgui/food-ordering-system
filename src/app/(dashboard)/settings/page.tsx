@@ -1,8 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import type { RestaurantSettings } from "@/types";
+import { getDefaultRestaurantSettings } from "@/lib/restaurant-settings";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +20,8 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { fetchSettings, updateSettings } from "./actions";
+
+const defaultSettings = getDefaultRestaurantSettings();
 
 export default function SettingsPage() {
   const t = useTranslations();
@@ -25,12 +35,9 @@ export default function SettingsPage() {
     currency: "USD",
     timezone: "UTC",
   });
-  const [settings, setSettings] = useState({
-    autoConfirm: false,
-    requireName: false,
-    showPrices: true,
-    enableNotifications: true,
-  });
+  const [settings, setSettings] = useState<Required<RestaurantSettings>>(
+    defaultSettings
+  );
 
   useEffect(() => {
     async function loadData() {
@@ -40,60 +47,87 @@ export default function SettingsPage() {
         setIsLoading(false);
         return;
       }
-      const r = res.restaurant;
-      setRestaurantId(r.id);
+
+      const restaurantRecord = res.restaurant;
+      setRestaurantId(restaurantRecord.id);
       setRestaurant({
-        name: r.name || "",
-        slug: r.slug || "",
-        description: r.description || "",
-        address: r.address || "",
-        currency: r.currency || "USD",
-        timezone: r.timezone || "UTC",
+        name: restaurantRecord.name || "",
+        slug: restaurantRecord.slug || "",
+        description: restaurantRecord.description || "",
+        address: restaurantRecord.address || "",
+        currency: restaurantRecord.currency || "USD",
+        timezone: restaurantRecord.timezone || "UTC",
       });
-      setSettings({
-        autoConfirm: r.settings?.autoConfirm || false,
-        requireName: r.settings?.requireName || false,
-        showPrices: r.settings?.showPrices ?? true,
-        enableNotifications: r.settings?.enableNotifications ?? true,
-      });
+      setSettings(
+        (restaurantRecord.settings as Required<RestaurantSettings>) ||
+          defaultSettings
+      );
       setIsLoading(false);
     }
+
     loadData();
   }, []);
+
+  function updateWorkflow<K extends keyof Required<RestaurantSettings>["orderWorkflow"]>(
+    key: K,
+    value: Required<RestaurantSettings>["orderWorkflow"][K]
+  ) {
+    setSettings((current) => ({
+      ...current,
+      orderWorkflow: {
+        ...current.orderWorkflow,
+        [key]: value,
+      },
+    }));
+  }
+
+  function updateNotifications<
+    K extends keyof Required<RestaurantSettings>["notifications"],
+  >(key: K, value: Required<RestaurantSettings>["notifications"][K]) {
+    setSettings((current) => ({
+      ...current,
+      notifications: {
+        ...current.notifications,
+        [key]: value,
+      },
+    }));
+  }
 
   async function handleSave() {
     if (!restaurantId) return;
     const res = await updateSettings(restaurantId, { ...restaurant, settings });
     if (res.error) {
       toast.error(res.error);
-    } else {
-      toast.success("Settings saved successfully");
+      return;
     }
+
+    toast.success("Settings saved successfully");
   }
 
   if (isLoading) {
-    return <div className="flex h-64 items-center justify-center">Loading settings...</div>;
+    return (
+      <div className="flex h-64 items-center justify-center">
+        Loading settings...
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          {t("nav.settings")}
-        </h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t("nav.settings")}</h1>
         <p className="mt-1 text-muted-foreground">
-          Manage your restaurant profile and preferences
+          Configure restaurant workflow, staffing alerts, and performance targets.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          {/* Restaurant Details */}
           <Card>
             <CardHeader>
               <CardTitle>Restaurant Details</CardTitle>
               <CardDescription>
-                Public information shown to your customers
+                Public information shown to guests and used in QR links.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -103,23 +137,24 @@ export default function SettingsPage() {
                   <Input
                     id="settings-name"
                     value={restaurant.name}
-                    onChange={(e) =>
-                      setRestaurant({ ...restaurant, name: e.target.value })
+                    onChange={(event) =>
+                      setRestaurant((current) => ({
+                        ...current,
+                        name: event.target.value,
+                      }))
                     }
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="settings-slug">
-                    URL Slug
-                    <span className="text-xs text-muted-foreground ms-1">
-                      (used in QR links)
-                    </span>
-                  </Label>
+                  <Label htmlFor="settings-slug">URL Slug</Label>
                   <Input
                     id="settings-slug"
                     value={restaurant.slug}
-                    onChange={(e) =>
-                      setRestaurant({ ...restaurant, slug: e.target.value })
+                    onChange={(event) =>
+                      setRestaurant((current) => ({
+                        ...current,
+                        slug: event.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -129,8 +164,11 @@ export default function SettingsPage() {
                 <Textarea
                   id="settings-desc"
                   value={restaurant.description}
-                  onChange={(e) =>
-                    setRestaurant({ ...restaurant, description: e.target.value })
+                  onChange={(event) =>
+                    setRestaurant((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
                   }
                   rows={3}
                 />
@@ -140,8 +178,11 @@ export default function SettingsPage() {
                 <Input
                   id="settings-address"
                   value={restaurant.address}
-                  onChange={(e) =>
-                    setRestaurant({ ...restaurant, address: e.target.value })
+                  onChange={(event) =>
+                    setRestaurant((current) => ({
+                      ...current,
+                      address: event.target.value,
+                    }))
                   }
                 />
               </div>
@@ -151,8 +192,11 @@ export default function SettingsPage() {
                   <Input
                     id="settings-currency"
                     value={restaurant.currency}
-                    onChange={(e) =>
-                      setRestaurant({ ...restaurant, currency: e.target.value })
+                    onChange={(event) =>
+                      setRestaurant((current) => ({
+                        ...current,
+                        currency: event.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -161,157 +205,259 @@ export default function SettingsPage() {
                   <Input
                     id="settings-timezone"
                     value={restaurant.timezone}
-                    onChange={(e) =>
-                      setRestaurant({ ...restaurant, timezone: e.target.value })
+                    onChange={(event) =>
+                      setRestaurant((current) => ({
+                        ...current,
+                        timezone: event.target.value,
+                      }))
                     }
                   />
                 </div>
               </div>
-              <Separator />
-              <Button onClick={handleSave}>{t("common.save")}</Button>
             </CardContent>
           </Card>
 
-          {/* Order Preferences */}
           <Card>
             <CardHeader>
-              <CardTitle>Order Preferences</CardTitle>
+              <CardTitle>Workflow Rules</CardTitle>
               <CardDescription>
-                Configure how orders are handled
+                Control how orders move from customer placement through delivery.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
-                  <Label>Auto-confirm orders</Label>
+                  <Label>Auto-accept customer orders</Label>
                   <p className="text-xs text-muted-foreground">
-                    Skip the &quot;pending&quot; step and move orders directly to
-                    &quot;preparing&quot;
+                    New orders enter the kitchen queue without requiring a manual accept step.
                   </p>
                 </div>
                 <Switch
-                  checked={settings.autoConfirm}
-                  onCheckedChange={(v) =>
-                    setSettings({ ...settings, autoConfirm: v })
+                  checked={settings.orderWorkflow.autoAccept}
+                  onCheckedChange={(value) =>
+                    updateWorkflow("autoAccept", value)
                   }
                 />
               </div>
               <Separator />
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
                   <Label>Require customer name</Label>
                   <p className="text-xs text-muted-foreground">
-                    Ask customers for their name when ordering
+                    Enforce guest identification before an order can be submitted.
                   </p>
                 </div>
                 <Switch
-                  checked={settings.requireName}
-                  onCheckedChange={(v) =>
-                    setSettings({ ...settings, requireName: v })
+                  checked={settings.orderWorkflow.requireCustomerName}
+                  onCheckedChange={(value) =>
+                    updateWorkflow("requireCustomerName", value)
                   }
                 />
               </div>
               <Separator />
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
-                  <Label>Show prices on menu</Label>
+                  <Label>Require customer phone</Label>
                   <p className="text-xs text-muted-foreground">
-                    Display prices next to each menu item
+                    Capture a phone number for follow-up or delivery coordination.
                   </p>
                 </div>
                 <Switch
-                  checked={settings.showPrices}
-                  onCheckedChange={(v) =>
-                    setSettings({ ...settings, showPrices: v })
+                  checked={settings.orderWorkflow.requireCustomerPhone}
+                  onCheckedChange={(value) =>
+                    updateWorkflow("requireCustomerPhone", value)
                   }
                 />
               </div>
               <Separator />
-              <div className="flex items-center justify-between">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="prep-target">Preparation Target (minutes)</Label>
+                  <Input
+                    id="prep-target"
+                    type="number"
+                    min={1}
+                    value={settings.orderWorkflow.prepTargetMinutes}
+                    onChange={(event) =>
+                      updateWorkflow(
+                        "prepTargetMinutes",
+                        Number(event.target.value) || 1
+                      )
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="delivery-target">Delivery Target (minutes)</Label>
+                  <Input
+                    id="delivery-target"
+                    type="number"
+                    min={1}
+                    value={settings.orderWorkflow.deliveryTargetMinutes}
+                    onChange={(event) =>
+                      updateWorkflow(
+                        "deliveryTargetMinutes",
+                        Number(event.target.value) || 1
+                      )
+                    }
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-4 rounded-xl border bg-muted/30 px-4 py-3">
                 <div className="space-y-0.5">
-                  <Label>Sound notifications</Label>
+                  <Label>Auto-complete delivered orders</Label>
                   <p className="text-xs text-muted-foreground">
-                    Play a sound when new orders arrive
+                    Reserved for follow-up automations after waiter handoff is complete.
                   </p>
                 </div>
                 <Switch
-                  checked={settings.enableNotifications}
-                  onCheckedChange={(v) =>
-                    setSettings({ ...settings, enableNotifications: v })
+                  checked={settings.orderWorkflow.autoCompleteDelivered}
+                  onCheckedChange={(value) =>
+                    updateWorkflow("autoCompleteDelivered", value)
                   }
                 />
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Alerts and Analytics</CardTitle>
+              <CardDescription>
+                Tune realtime notifications and delay tolerance for performance reporting.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-xl border p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <Label>Dashboard sound</Label>
+                    <Switch
+                      checked={settings.notifications.dashboardSound}
+                      onCheckedChange={(value) =>
+                        updateNotifications("dashboardSound", value)
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Play an alert for owner and manager dashboards.
+                  </p>
+                </div>
+                <div className="rounded-xl border p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <Label>Kitchen sound</Label>
+                    <Switch
+                      checked={settings.notifications.kitchenSound}
+                      onCheckedChange={(value) =>
+                        updateNotifications("kitchenSound", value)
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Notify kitchen staff as soon as new orders arrive.
+                  </p>
+                </div>
+                <div className="rounded-xl border p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <Label>Waiter sound</Label>
+                    <Switch
+                      checked={settings.notifications.waiterSound}
+                      onCheckedChange={(value) =>
+                        updateNotifications("waiterSound", value)
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Alert waiters when orders are ready for delivery.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="delay-grace">Delay Grace Window (minutes)</Label>
+                <Input
+                  id="delay-grace"
+                  type="number"
+                  min={0}
+                  value={settings.analytics.delayedOrderGraceMinutes}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      analytics: {
+                        ...current.analytics,
+                        delayedOrderGraceMinutes:
+                          Number(event.target.value) || 0,
+                      },
+                    }))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Orders exceeding this grace window count as delayed in staff analytics.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Button onClick={handleSave}>{t("common.save")}</Button>
         </div>
 
-        {/* Sidebar Info */}
         <div className="space-y-6">
-          {/* Supabase Status */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Database Status</CardTitle>
+              <CardTitle className="text-base">Operational Snapshot</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Supabase</span>
-                <Badge variant="secondary" className="text-xs bg-green-500/15 text-green-700 dark:text-green-400">
-                  Connected
+                <span className="text-sm text-muted-foreground">Kitchen target</span>
+                <Badge variant="secondary">
+                  {settings.orderWorkflow.prepTargetMinutes} min
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Your restaurant data is securely stored and syncing in real-time.
-              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Delivery target</span>
+                <Badge variant="secondary">
+                  {settings.orderWorkflow.deliveryTargetMinutes} min
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Delayed grace</span>
+                <Badge variant="secondary">
+                  {settings.analytics.delayedOrderGraceMinutes} min
+                </Badge>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Plan Info */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Current Plan</CardTitle>
+              <CardTitle className="text-base">Realtime Coverage</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Free Plan</span>
-                <Badge className="bg-primary/15 text-primary">Active</Badge>
+                <span className="text-sm text-muted-foreground">Dashboard</span>
+                <Badge
+                  variant="secondary"
+                  className="bg-green-500/15 text-green-700 dark:text-green-400"
+                >
+                  {settings.notifications.dashboardSound ? "Alerting" : "Muted"}
+                </Badge>
               </div>
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <div className="flex justify-between">
-                  <span>Tables</span>
-                  <span>6 / 10</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full w-[60%] rounded-full bg-primary" />
-                </div>
-                <div className="flex justify-between">
-                  <span>Menu Items</span>
-                  <span>17 / 50</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full w-[34%] rounded-full bg-primary" />
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Kitchen</span>
+                <Badge
+                  variant="secondary"
+                  className="bg-orange-500/15 text-orange-700 dark:text-orange-400"
+                >
+                  {settings.notifications.kitchenSound ? "Alerting" : "Muted"}
+                </Badge>
               </div>
-              <Button variant="outline" size="sm" className="w-full mt-2">
-                Upgrade Plan
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Danger Zone */}
-          <Card className="border-destructive/30">
-            <CardHeader>
-              <CardTitle className="text-base text-destructive">
-                Danger Zone
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground">
-                Permanently delete your restaurant and all associated data.
-                This action cannot be undone.
-              </p>
-              <Button variant="destructive" size="sm" className="w-full">
-                Delete Restaurant
-              </Button>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Waiter</span>
+                <Badge
+                  variant="secondary"
+                  className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                >
+                  {settings.notifications.waiterSound ? "Alerting" : "Muted"}
+                </Badge>
+              </div>
             </CardContent>
           </Card>
         </div>

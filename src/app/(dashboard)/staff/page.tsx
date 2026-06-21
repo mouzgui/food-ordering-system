@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import type { StaffRole } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,9 +34,10 @@ import { fetchStaffMembers, inviteStaffMember as inviteAction, removeStaffMember
 
 interface StaffMember {
   id: string;
+  user_id: string;
   name: string;
   email: string;
-  role: "owner" | "manager" | "waiter";
+  role: StaffRole;
   is_active: boolean;
   joined_at: string;
 }
@@ -43,17 +45,26 @@ interface StaffMember {
 const roleColors: Record<string, string> = {
   owner: "bg-primary/15 text-primary",
   manager: "bg-chart-2/15 text-chart-2",
+  kitchen_staff: "bg-orange-500/15 text-orange-700 dark:text-orange-400",
   waiter: "bg-chart-3/15 text-chart-3",
 };
+
+const MANAGEABLE_ROLES: Exclude<StaffRole, "owner">[] = [
+  "manager",
+  "kitchen_staff",
+  "waiter",
+];
 
 export default function StaffPage() {
   const t = useTranslations();
   const [isLoading, setIsLoading] = useState(true);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [currentRole, setCurrentRole] = useState<StaffRole>("manager");
+  const [currentMemberId, setCurrentMemberId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [newRole, setNewRole] = useState<"manager" | "waiter">("waiter");
+  const [newRole, setNewRole] = useState<Exclude<StaffRole, "owner">>("waiter");
 
   useEffect(() => {
     async function loadData() {
@@ -64,6 +75,8 @@ export default function StaffPage() {
         return;
       }
       setRestaurantId(res.restaurantId || null);
+      setCurrentRole((res.currentRole as StaffRole | undefined) || "manager");
+      setCurrentMemberId(res.currentMemberId || null);
       setStaff(res.staff || []);
       setIsLoading(false);
     }
@@ -90,18 +103,18 @@ export default function StaffPage() {
 
   async function removeMember(id: string) {
     const previousStaff = [...staff];
-    setStaff(staff.filter((m) => m.id !== id));
+    setStaff(staff.map((m) => (m.id === id ? { ...m, is_active: false } : m)));
     
     const res = await removeAction(id);
     if (res.error) {
       toast.error(res.error);
       setStaff(previousStaff);
     } else {
-      toast.success("Member removed");
+      toast.success("Member deactivated");
     }
   }
 
-  async function changeRole(id: string, role: "manager" | "waiter") {
+  async function changeRole(id: string, role: Exclude<StaffRole, "owner">) {
     const previousStaff = [...staff];
     setStaff(staff.map((m) => (m.id === id ? { ...m, role } : m)));
     
@@ -111,6 +124,22 @@ export default function StaffPage() {
       setStaff(previousStaff);
     } else {
       toast.success("Role updated");
+    }
+  }
+
+  function canManage(member: StaffMember) {
+    if (member.id === currentMemberId) return false;
+    if (member.role === "owner") return false;
+    if (currentRole === "owner") return true;
+    return member.role === "waiter" || member.role === "kitchen_staff";
+  }
+
+  function roleLabel(role: StaffRole) {
+    switch (role) {
+      case "kitchen_staff":
+        return "Kitchen Staff";
+      default:
+        return role.charAt(0).toUpperCase() + role.slice(1);
     }
   }
 
@@ -148,7 +177,7 @@ export default function StaffPage() {
               <div className="space-y-2">
                 <Label>Role</Label>
                 <div className="flex gap-2">
-                  {(["manager", "waiter"] as const).map((role) => (
+                  {MANAGEABLE_ROLES.filter((role) => currentRole === "owner" || role !== "manager").map((role) => (
                     <button
                       key={role}
                       onClick={() => setNewRole(role)}
@@ -156,7 +185,7 @@ export default function StaffPage() {
                         newRole === role ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"
                       }`}
                     >
-                      {role.charAt(0).toUpperCase() + role.slice(1)}
+                      {roleLabel(role)}
                     </button>
                   ))}
                 </div>
@@ -206,20 +235,25 @@ export default function StaffPage() {
                   </p>
                 </div>
                 <Badge className={`text-xs ${roleColors[member.role]}`}>
-                  {member.role}
+                  {roleLabel(member.role)}
                 </Badge>
                 <span className="hidden sm:block text-xs text-muted-foreground">
                   Joined {member.joined_at}
                 </span>
-                {member.role !== "owner" && (
+                {canManage(member) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger className="p-1 rounded hover:bg-muted transition-colors outline-none">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {member.role !== "manager" && (
+                      {currentRole === "owner" && member.role !== "manager" && (
                         <DropdownMenuItem onClick={() => changeRole(member.id, "manager")}>
                           Promote to Manager
+                        </DropdownMenuItem>
+                      )}
+                      {member.role !== "kitchen_staff" && (
+                        <DropdownMenuItem onClick={() => changeRole(member.id, "kitchen_staff")}>
+                          Set as Kitchen Staff
                         </DropdownMenuItem>
                       )}
                       {member.role !== "waiter" && (
@@ -231,7 +265,7 @@ export default function StaffPage() {
                         variant="destructive"
                         onClick={() => removeMember(member.id)}
                       >
-                        Remove
+                        Deactivate
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

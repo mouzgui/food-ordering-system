@@ -7,8 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useParams } from "next/navigation";
 import confetti from "canvas-confetti";
@@ -34,7 +47,15 @@ interface Category {
 }
 
 interface MenuData {
-  restaurant: { id: string; name: string };
+  restaurant: {
+    id: string;
+    name: string;
+    settings?: {
+      orderWorkflow?: {
+        requireCustomerName?: boolean;
+      };
+    };
+  };
   table: { id: string; label: string };
   categories: Category[];
   items: MenuItem[];
@@ -83,16 +104,16 @@ export default function CustomerMenuPage() {
   const cart = store.cart;
   const itemCount = store.getItemCount();
   const subtotal = store.getSubtotal();
-  const { 
-    customerName, 
-    setCustomerName, 
-    orderPlaced, 
-    activeOrderId: orderId, 
-    activeOrderNumber: orderNumber, 
-    activeOrderStatus: orderStatus, 
-    setActiveOrder, 
-    updateOrderStatus, 
-    clearActiveOrder 
+  const {
+    customerName,
+    setCustomerName,
+    orderPlaced,
+    activeOrderId: orderId,
+    activeOrderNumber: orderNumber,
+    activeOrderStatus: orderStatus,
+    setActiveOrder,
+    updateOrderStatus,
+    clearActiveOrder,
   } = store;
 
   // Local UI State
@@ -103,7 +124,7 @@ export default function CustomerMenuPage() {
   const [feedbackRating, setFeedbackRating] = useState<number>(0);
   const [feedbackGiven, setFeedbackGiven] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
-  
+
   // Hydration fix for Zustand persist
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -111,7 +132,9 @@ export default function CustomerMenuPage() {
   /* ───── Play notification sound via Web Audio API ───── */
   const playNotificationSound = () => {
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = new (
+        window.AudioContext || (window as any).webkitAudioContext
+      )();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
@@ -186,28 +209,34 @@ export default function CustomerMenuPage() {
           if (payload.new?.status && payload.new.status !== orderStatus) {
             updateOrderStatus(payload.new.status);
             playNotificationSound();
-            
+
             const statusMessages: Record<string, string> = {
               preparing: "Your order is being prepared! 👨‍🍳",
               ready: "Your order is ready! 🎉",
               delivered: "Enjoy your meal! 🍽️",
             };
             const msg = statusMessages[payload.new.status];
-            
+
             if (payload.new.status === "delivered") {
               // Trigger confetti
               confetti({
                 particleCount: 150,
                 spread: 80,
                 origin: { y: 0.6 },
-                colors: ["#22c55e", "#3b82f6", "#f59e0b", "#ec4899"]
+                colors: ["#22c55e", "#3b82f6", "#f59e0b", "#ec4899"],
               });
-              toast.success(msg || "Order Delivered!", { duration: 8000, position: "top-center" });
+              toast.success(msg || "Order Delivered!", {
+                duration: 8000,
+                position: "top-center",
+              });
             } else if (msg) {
-              toast.success(`Update: ${msg}`, { duration: 5000, position: "top-center" });
+              toast.success(`Update: ${msg}`, {
+                duration: 5000,
+                position: "top-center",
+              });
             }
           }
-        }
+        },
       )
       .subscribe();
 
@@ -232,6 +261,13 @@ export default function CustomerMenuPage() {
 
   async function placeOrder() {
     if (!data || cart.length === 0) return;
+    if (
+      data.restaurant.settings?.orderWorkflow?.requireCustomerName &&
+      !customerName.trim()
+    ) {
+      toast.error("Customer name is required for this restaurant.");
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -247,7 +283,7 @@ export default function CustomerMenuPage() {
       data.table.id,
       customerName || "Guest",
       cartPayload,
-      subtotal
+      subtotal,
     );
 
     setIsSubmitting(false);
@@ -258,7 +294,11 @@ export default function CustomerMenuPage() {
     }
 
     setCartOpen(false);
-    setActiveOrder(res.orderId, res.orderNumber || "");
+    setActiveOrder(
+      res.orderId,
+      res.orderNumber || "",
+      res.initialStatus || "pending",
+    );
     toast.success(t("customer.orderPlaced"));
   }
 
@@ -268,18 +308,44 @@ export default function CustomerMenuPage() {
       <div className="flex flex-col h-screen items-center justify-center gap-4 bg-gradient-to-b from-primary/5 to-background">
         <div className="relative">
           <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-primary"
+            >
+              <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+              <path d="M7 2v20" />
+              <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+            </svg>
           </div>
           <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
             <div className="h-2 w-2 rounded-full bg-primary-foreground animate-ping" />
           </div>
         </div>
         <div className="text-center">
-          <p className="text-sm font-medium text-muted-foreground">Loading your menu</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            Loading your menu
+          </p>
           <div className="mt-2 flex gap-1 justify-center">
-            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
-            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
-            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+            <div
+              className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            />
+            <div
+              className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            />
+            <div
+              className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            />
           </div>
         </div>
       </div>
@@ -291,19 +357,45 @@ export default function CustomerMenuPage() {
     return (
       <div className="flex flex-col h-screen items-center justify-center gap-4 px-6 text-center">
         <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-destructive"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-destructive"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" x2="9" y1="9" y2="15" />
+            <line x1="9" x2="15" y1="9" y2="15" />
+          </svg>
         </div>
         <div>
           <h1 className="text-lg font-semibold">Something went wrong</h1>
-          <p className="mt-1 text-sm text-muted-foreground max-w-xs">{error || "Menu not found"}</p>
+          <p className="mt-1 text-sm text-muted-foreground max-w-xs">
+            {error || "Menu not found"}
+          </p>
         </div>
-        <Button variant="outline" onClick={() => window.location.reload()}>Try Again</Button>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Try Again
+        </Button>
       </div>
     );
   }
 
   /* ───── Order Confirmation with Realtime Tracker ───── */
-  const STATUS_STEPS = ["pending", "preparing", "ready", "delivered"] as const;
+  const STATUS_STEPS = [
+    "pending",
+    "accepted",
+    "preparing",
+    "ready",
+    "served",
+    "delivered",
+  ] as const;
   const statusIndex = STATUS_STEPS.indexOf(orderStatus as any);
 
   if (orderPlaced && orderStatus === "delivered") {
@@ -314,17 +406,21 @@ export default function CustomerMenuPage() {
             <span className="text-5xl">🍽️</span>
           </div>
         </div>
-        
+
         <h1 className="text-3xl font-bold text-gradient">Enjoy your meal!</h1>
         <p className="mt-3 text-muted-foreground max-w-sm text-sm">
-          Thank you for dining with <strong className="text-foreground">{data?.restaurant.name}</strong>. We hope you have a wonderful experience!
+          Thank you for dining with{" "}
+          <strong className="text-foreground">{data?.restaurant.name}</strong>.
+          We hope you have a wonderful experience!
         </p>
 
         {!feedbackGiven ? (
           <Card className="mt-10 w-full max-w-sm overflow-hidden animate-slide-up">
             <div className="bg-gradient-to-r from-primary/10 to-primary/5 px-5 py-4 border-b">
               <h3 className="font-semibold text-lg">How was your order?</h3>
-              <p className="text-xs text-muted-foreground mt-1">Tap a star to rate</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Tap a star to rate
+              </p>
             </div>
             <CardContent className="p-6">
               <div className="flex justify-center gap-2">
@@ -370,12 +466,23 @@ export default function CustomerMenuPage() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background">
         <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center animate-fade-in">
-
           {/* Success animation */}
           <div className="relative mb-8">
             <div className="h-28 w-28 rounded-full bg-gradient-to-br from-green-400/20 to-green-600/20 flex items-center justify-center">
               <div className="h-20 w-20 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shadow-lg shadow-green-500/25">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="40"
+                  height="40"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
               </div>
             </div>
           </div>
@@ -384,7 +491,9 @@ export default function CustomerMenuPage() {
           {orderNumber && (
             <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5">
               <span className="text-sm text-muted-foreground">Order</span>
-              <span className="text-lg font-bold text-primary">#{orderNumber}</span>
+              <span className="text-lg font-bold text-primary">
+                #{orderNumber}
+              </span>
             </div>
           )}
           <p className="mt-3 text-sm text-muted-foreground max-w-xs">
@@ -396,7 +505,9 @@ export default function CustomerMenuPage() {
             <Card className="overflow-hidden">
               <div className="bg-gradient-to-r from-primary/10 to-primary/5 px-5 py-3 border-b">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">{t("customer.orderStatus")}</span>
+                  <span className="text-sm font-semibold">
+                    {t("customer.orderStatus")}
+                  </span>
                   <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                     Live
@@ -411,8 +522,10 @@ export default function CustomerMenuPage() {
 
                   const statusIcons: Record<string, string> = {
                     pending: "📋",
+                    accepted: "📥",
                     preparing: "👨‍🍳",
                     ready: "✅",
+                    served: "🍽️",
                     delivered: "🍽️",
                   };
 
@@ -424,22 +537,38 @@ export default function CustomerMenuPage() {
                             isCompleted
                               ? "bg-green-500 text-white shadow-md shadow-green-500/25"
                               : isCurrent
-                              ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 ring-4 ring-primary/20"
-                              : "bg-muted text-muted-foreground"
+                                ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 ring-4 ring-primary/20"
+                                : "bg-muted text-muted-foreground"
                           }`}
                         >
                           {isCompleted ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M20 6 9 17l-5-5" />
+                            </svg>
                           ) : (
                             statusIcons[status]
                           )}
                         </div>
                         <div className="flex-1">
-                          <span className={`text-sm font-medium ${isPending ? "text-muted-foreground" : ""}`}>
+                          <span
+                            className={`text-sm font-medium ${isPending ? "text-muted-foreground" : ""}`}
+                          >
                             {t(`orders.status.${status}`)}
                           </span>
                           {isCurrent && (
-                            <p className="text-xs text-primary mt-0.5 font-medium">In progress...</p>
+                            <p className="text-xs text-primary mt-0.5 font-medium">
+                              In progress...
+                            </p>
                           )}
                         </div>
                         {isCurrent && (
@@ -449,15 +578,30 @@ export default function CustomerMenuPage() {
                           </div>
                         )}
                         {isCompleted && (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><path d="M20 6 9 17l-5-5"/></svg>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-green-500"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
                         )}
                       </div>
                       {/* Connector line */}
                       {i < STATUS_STEPS.length - 1 && (
                         <div className="ml-5 flex">
-                          <div className={`w-0.5 h-4 rounded-full transition-colors duration-500 ${
-                            i < statusIndex ? "bg-green-500" : "bg-muted"
-                          }`} />
+                          <div
+                            className={`w-0.5 h-4 rounded-full transition-colors duration-500 ${
+                              i < statusIndex ? "bg-green-500" : "bg-muted"
+                            }`}
+                          />
                         </div>
                       )}
                     </div>
@@ -493,24 +637,41 @@ export default function CustomerMenuPage() {
         <div className="relative px-5 pt-8 pb-6">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">{data.restaurant.name}</h1>
+              <h1 className="text-2xl font-bold tracking-tight">
+                {data.restaurant.name}
+              </h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 Welcome! Order directly from your phone.
               </p>
             </div>
-            <Badge variant="secondary" className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium bg-background/80 backdrop-blur-sm border">
+            <Badge
+              variant="secondary"
+              className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium bg-background/80 backdrop-blur-sm border"
+            >
               📍 {data.table.label}
             </Badge>
           </div>
           {/* Search Bar */}
           <div className="mt-5 relative">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
             </svg>
-            <Input 
+            <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search dishes, ingredients, or tags..." 
+              placeholder="Search dishes, ingredients, or tags..."
               className="w-full pl-10 h-12 rounded-2xl bg-background/80 backdrop-blur-sm border-primary/10 shadow-sm"
             />
           </div>
@@ -528,7 +689,9 @@ export default function CustomerMenuPage() {
                   key={cat.id}
                   onClick={() => {
                     setActiveCategory(cat.id);
-                    document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    document
+                      .getElementById(`cat-${cat.id}`)
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
                   className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-95 ${
                     isActive
@@ -547,29 +710,44 @@ export default function CustomerMenuPage() {
       {/* Menu Items */}
       <div className="space-y-8 px-5 pt-6">
         {data.categories.map((category) => {
-          let categoryItems = data.items.filter((i) => i.category_id === category.id && i.is_available);
-          let unavailableItems = data.items.filter((i) => i.category_id === category.id && !i.is_available);
-          
+          let categoryItems = data.items.filter(
+            (i) => i.category_id === category.id && i.is_available,
+          );
+          let unavailableItems = data.items.filter(
+            (i) => i.category_id === category.id && !i.is_available,
+          );
+
           if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            const filterItem = (i: any) => 
-              i.name.toLowerCase().includes(query) || 
+            const filterItem = (i: any) =>
+              i.name.toLowerCase().includes(query) ||
               (i.description && i.description.toLowerCase().includes(query)) ||
-              (i.extras?.ingredients && i.extras.ingredients.toLowerCase().includes(query)) ||
-              (i.extras?.allergens && i.extras.allergens.toLowerCase().includes(query));
-            
+              (i.extras?.ingredients &&
+                i.extras.ingredients.toLowerCase().includes(query)) ||
+              (i.extras?.allergens &&
+                i.extras.allergens.toLowerCase().includes(query));
+
             categoryItems = categoryItems.filter(filterItem);
             unavailableItems = unavailableItems.filter(filterItem);
           }
 
-          if (categoryItems.length === 0 && unavailableItems.length === 0) return null;
+          if (categoryItems.length === 0 && unavailableItems.length === 0)
+            return null;
 
           return (
-            <section key={category.id} id={`cat-${category.id}`} className="scroll-mt-16">
+            <section
+              key={category.id}
+              id={`cat-${category.id}`}
+              className="scroll-mt-16"
+            >
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">{getCategoryEmoji(category.name)}</span>
+                <span className="text-xl">
+                  {getCategoryEmoji(category.name)}
+                </span>
                 <h2 className="text-lg font-semibold">{category.name}</h2>
-                <Badge variant="secondary" className="text-xs ml-auto">{categoryItems.length}</Badge>
+                <Badge variant="secondary" className="text-xs ml-auto">
+                  {categoryItems.length}
+                </Badge>
               </div>
               <div className="space-y-3">
                 {categoryItems.map((item) => {
@@ -580,14 +758,20 @@ export default function CustomerMenuPage() {
                     <div
                       key={item.id}
                       className={`rounded-2xl border bg-card p-4 transition-all duration-300 cursor-pointer ${
-                        justAdded ? "ring-2 ring-primary/50 scale-[0.98]" : "hover:shadow-md"
+                        justAdded
+                          ? "ring-2 ring-primary/50 scale-[0.98]"
+                          : "hover:shadow-md"
                       } ${cartItem ? "border-primary/30 bg-primary/[0.02]" : ""}`}
                       onClick={() => setSelectedItem(item)}
                     >
                       <div className="flex gap-4">
                         {item.image_url ? (
                           <div className="h-[72px] w-[72px] shrink-0 rounded-xl overflow-hidden shadow-sm">
-                            <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+                            <img
+                              src={item.image_url}
+                              alt={item.name}
+                              className="h-full w-full object-cover"
+                            />
                           </div>
                         ) : (
                           <div className="h-[72px] w-[72px] shrink-0 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center text-2xl">
@@ -608,7 +792,10 @@ export default function CustomerMenuPage() {
                           </p>
                           <div className="mt-3">
                             {cartItem ? (
-                              <div className="inline-flex items-center rounded-xl bg-primary/10 border border-primary/20" onClick={e => e.stopPropagation()}>
+                              <div
+                                className="inline-flex items-center rounded-xl bg-primary/10 border border-primary/20"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <button
                                   onClick={() => updateQuantity(item.id, -1)}
                                   className="px-3 py-1.5 text-sm font-bold text-primary hover:bg-primary/10 transition-colors rounded-l-xl active:scale-90"
@@ -628,9 +815,25 @@ export default function CustomerMenuPage() {
                             ) : (
                               <button
                                 className="inline-flex items-center gap-1.5 rounded-xl bg-primary/10 text-primary px-4 py-2 text-sm font-semibold hover:bg-primary/20 transition-all active:scale-95"
-                                onClick={(e) => { e.stopPropagation(); addToCart(item); }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addToCart(item);
+                                }}
                               >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M12 5v14" />
+                                  <path d="M5 12h14" />
+                                </svg>
                                 Add
                               </button>
                             )}
@@ -642,15 +845,24 @@ export default function CustomerMenuPage() {
                 })}
                 {/* Unavailable items */}
                 {unavailableItems.map((item) => (
-                  <div key={item.id} className="rounded-2xl border bg-card p-4 opacity-40">
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border bg-card p-4 opacity-40"
+                  >
                     <div className="flex gap-4">
                       <div className="h-[72px] w-[72px] shrink-0 rounded-xl bg-muted flex items-center justify-center text-2xl grayscale">
                         {getCategoryEmoji(category.name)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-[15px] leading-tight">{item.name}</h3>
-                        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{item.description}</p>
-                        <Badge variant="secondary" className="mt-2 text-xs">Sold Out</Badge>
+                        <h3 className="font-semibold text-[15px] leading-tight">
+                          {item.name}
+                        </h3>
+                        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                          {item.description}
+                        </p>
+                        <Badge variant="secondary" className="mt-2 text-xs">
+                          Sold Out
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -678,14 +890,21 @@ export default function CustomerMenuPage() {
               <SheetHeader>
                 <SheetTitle className="text-lg">
                   {t("customer.cart")}
-                  <Badge variant="secondary" className="ml-2 text-xs">{itemCount} items</Badge>
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {itemCount} items
+                  </Badge>
                 </SheetTitle>
               </SheetHeader>
               <div className="space-y-1 mt-4 overflow-y-auto max-h-[40vh] -mx-2 px-2">
                 {cart.map((ci) => (
-                  <div key={ci.item.id} className="flex items-center justify-between gap-3 rounded-xl p-3 hover:bg-muted/50 transition-colors">
+                  <div
+                    key={ci.item.id}
+                    className="flex items-center justify-between gap-3 rounded-xl p-3 hover:bg-muted/50 transition-colors"
+                  >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{ci.item.name}</p>
+                      <p className="text-sm font-semibold truncate">
+                        {ci.item.name}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         ${ci.item.price.toFixed(2)} × {ci.quantity}
                       </p>
@@ -720,14 +939,20 @@ export default function CustomerMenuPage() {
 
               <div className="space-y-3">
                 <Input
-                  placeholder={t("customer.yourName")}
+                  placeholder={
+                    data.restaurant.settings?.orderWorkflow?.requireCustomerName
+                      ? `${t("customer.yourName")} *`
+                      : t("customer.yourName")
+                  }
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="rounded-xl h-11"
                 />
                 <div className="rounded-xl bg-muted/50 p-4 space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{t("customer.subtotal")}</span>
+                    <span className="text-muted-foreground">
+                      {t("customer.subtotal")}
+                    </span>
                     <span className="font-medium">${subtotal.toFixed(2)}</span>
                   </div>
                   <Separator />
@@ -762,52 +987,91 @@ export default function CustomerMenuPage() {
       )}
 
       {/* Item Details Dialog */}
-      <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+      <Dialog
+        open={!!selectedItem}
+        onOpenChange={(open) => !open && setSelectedItem(null)}
+      >
         <DialogContent className="max-w-md p-0 overflow-hidden rounded-3xl border-0">
           {selectedItem && (
             <div className="flex flex-col max-h-[85vh]">
               {selectedItem.image_url ? (
                 <div className="relative h-64 w-full bg-muted shrink-0">
-                  <img src={selectedItem.image_url} alt={selectedItem.name} className="h-full w-full object-cover" />
+                  <img
+                    src={selectedItem.image_url}
+                    alt={selectedItem.name}
+                    className="h-full w-full object-cover"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
               ) : (
                 <div className="relative h-48 w-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0">
-                  <span className="text-6xl">{getCategoryEmoji(data.categories.find(c => c.id === selectedItem.category_id)?.name || "")}</span>
+                  <span className="text-6xl">
+                    {getCategoryEmoji(
+                      data.categories.find(
+                        (c) => c.id === selectedItem.category_id,
+                      )?.name || "",
+                    )}
+                  </span>
                 </div>
               )}
-              
+
               <div className="p-6 overflow-y-auto">
                 <div className="flex justify-between items-start gap-4">
-                  <h2 className="text-2xl font-bold leading-tight">{selectedItem.name}</h2>
-                  <span className="text-xl font-bold text-primary shrink-0">${selectedItem.price.toFixed(2)}</span>
+                  <h2 className="text-2xl font-bold leading-tight">
+                    {selectedItem.name}
+                  </h2>
+                  <span className="text-xl font-bold text-primary shrink-0">
+                    ${selectedItem.price.toFixed(2)}
+                  </span>
                 </div>
-                
-                <p className="mt-3 text-muted-foreground">{selectedItem.description}</p>
-                
-                {selectedItem.extras && Object.keys(selectedItem.extras).length > 0 && (
-                  <div className="mt-6 space-y-4 bg-muted/30 p-4 rounded-2xl border">
-                    {selectedItem.extras.ingredients && (
-                      <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Ingredients</h4>
-                        <p className="text-sm">{selectedItem.extras.ingredients}</p>
-                      </div>
-                    )}
-                    {(selectedItem.extras.allergens || selectedItem.extras.calories > 0) && (
-                      <div className="flex flex-wrap gap-2 pt-2 border-t">
-                        {selectedItem.extras.calories > 0 && (
-                          <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20">🔥 {selectedItem.extras.calories} kcal</Badge>
-                        )}
-                        {selectedItem.extras.allergens && selectedItem.extras.allergens.split(',').map((tag: string, i: number) => (
-                          <Badge key={i} variant="outline" className="border-primary/20 text-primary">{tag.trim()}</Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
+
+                <p className="mt-3 text-muted-foreground">
+                  {selectedItem.description}
+                </p>
+
+                {selectedItem.extras &&
+                  Object.keys(selectedItem.extras).length > 0 && (
+                    <div className="mt-6 space-y-4 bg-muted/30 p-4 rounded-2xl border">
+                      {selectedItem.extras.ingredients && (
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                            Ingredients
+                          </h4>
+                          <p className="text-sm">
+                            {selectedItem.extras.ingredients}
+                          </p>
+                        </div>
+                      )}
+                      {(selectedItem.extras.allergens ||
+                        selectedItem.extras.calories > 0) && (
+                        <div className="flex flex-wrap gap-2 pt-2 border-t">
+                          {selectedItem.extras.calories > 0 && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20"
+                            >
+                              🔥 {selectedItem.extras.calories} kcal
+                            </Badge>
+                          )}
+                          {selectedItem.extras.allergens &&
+                            selectedItem.extras.allergens
+                              .split(",")
+                              .map((tag: string, i: number) => (
+                                <Badge
+                                  key={i}
+                                  variant="outline"
+                                  className="border-primary/20 text-primary"
+                                >
+                                  {tag.trim()}
+                                </Badge>
+                              ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                 <div className="mt-8">
-                  {cart.find(ci => ci.item.id === selectedItem.id) ? (
+                  {cart.find((ci) => ci.item.id === selectedItem.id) ? (
                     <div className="flex items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 p-2">
                       <button
                         onClick={() => updateQuantity(selectedItem.id, -1)}
@@ -816,7 +1080,10 @@ export default function CustomerMenuPage() {
                         −
                       </button>
                       <span className="flex-1 text-xl font-bold text-primary text-center">
-                        {cart.find(ci => ci.item.id === selectedItem.id)?.quantity}
+                        {
+                          cart.find((ci) => ci.item.id === selectedItem.id)
+                            ?.quantity
+                        }
                       </span>
                       <button
                         onClick={() => updateQuantity(selectedItem.id, 1)}
@@ -826,8 +1093,8 @@ export default function CustomerMenuPage() {
                       </button>
                     </div>
                   ) : (
-                    <Button 
-                      className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg shadow-primary/25" 
+                    <Button
+                      className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg shadow-primary/25"
                       onClick={() => {
                         addToCart(selectedItem);
                         setSelectedItem(null);

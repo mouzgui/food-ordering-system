@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ROLE_HOME_ROUTE } from "@/types";
+import type { StaffRole } from "@/types/database";
 import {
   Card,
   CardContent,
@@ -42,8 +44,27 @@ export default function LoginPage() {
         return;
       }
 
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      let destination = "/overview";
+      if (user) {
+        const { data: member } = (await supabase
+          .from("restaurant_members")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .limit(1)
+          .single()) as any;
+
+        if (member?.role) {
+          destination = ROLE_HOME_ROUTE[member.role as StaffRole];
+        }
+      }
+
       toast.success("Welcome back!");
-      router.push("/overview");
+      router.push(destination);
       router.refresh();
     } catch {
       toast.error("Something went wrong. Please try again.");
@@ -106,7 +127,10 @@ export default function LoginPage() {
           </Button>
           <p className="text-center text-sm text-muted-foreground">
             {t("auth.noAccount")}{" "}
-            <Link href="/register" className="text-primary hover:underline font-medium">
+            <Link
+              href="/register"
+              className="text-primary hover:underline font-medium"
+            >
               {t("auth.register")}
             </Link>
           </p>
