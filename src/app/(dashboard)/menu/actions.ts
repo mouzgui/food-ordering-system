@@ -167,7 +167,7 @@ export async function toggleItemAvailability(id: string, isAvailable: boolean) {
   return { success: true };
 }
 
-export async function generateTemplate(restaurantId: string, templateType: 'pizzeria' | 'cafe') {
+export async function generateTemplate(restaurantId: string, templateType: 'pizzeria' | 'cafe' | 'fine_dining') {
   const membership = await requireRole(["owner", "manager"]);
   if (membership.restaurantId !== restaurantId) return { error: "Unauthorized" };
 
@@ -176,15 +176,21 @@ export async function generateTemplate(restaurantId: string, templateType: 'pizz
   let categoriesData: { name: string; desc: string }[] = [];
   if (templateType === 'pizzeria') {
     categoriesData = [
-      { name: "Wood-Fired Pizzas", desc: "Authentic Neapolitan style pizzas" },
-      { name: "Starters", desc: "Perfect for sharing" },
-      { name: "Drinks", desc: "Cold beverages" }
+      { name: "Wood-Fired Pizzas", desc: "Authentic Neapolitan style pizzas crafted with 48-hour fermented dough." },
+      { name: "Artisan Starters", desc: "Perfectly portioned beginnings to share with the table." },
+      { name: "Craft Beverages", desc: "Hand-selected local sodas and signature refreshments." }
     ];
   } else if (templateType === 'cafe') {
     categoriesData = [
-      { name: "Hot Beverages", desc: "Freshly roasted coffee" },
-      { name: "Cold Brews", desc: "Refreshing iced drinks" },
-      { name: "Pastries", desc: "Baked fresh daily" }
+      { name: "Signature Brews", desc: "Ethically sourced, single-origin coffee roasted to perfection." },
+      { name: "Cold Refreshments", desc: "Iced lattes, cold brews, and seasonal infused teas." },
+      { name: "Gourmet Pastries", desc: "Baked fresh every morning by our in-house pastry chef." }
+    ];
+  } else if (templateType === 'fine_dining') {
+    categoriesData = [
+      { name: "Hors d'oeuvres", desc: "Delicate bites designed to awaken the palate." },
+      { name: "Les Plats Principaux", desc: "Masterfully composed main courses featuring seasonal ingredients." },
+      { name: "Desserts & Fromage", desc: "Decadent sweets and curated artisanal cheeses." }
     ];
   }
 
@@ -199,16 +205,30 @@ export async function generateTemplate(restaurantId: string, templateType: 'pizz
 
   if (templateType === 'pizzeria' && categories.length > 0) {
     await supabase.from("menu_items").insert([
-      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Margherita", description: "Tomato sauce, fresh mozzarella, basil", price: 12.00, is_available: true, sort_order: 0 },
-      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Pepperoni", description: "Tomato sauce, mozzarella, spicy pepperoni", price: 14.50, is_available: true, sort_order: 1 },
-      { category_id: categories[1].id, restaurant_id: restaurantId, name: "Garlic Bread", description: "Wood-fired bread with garlic butter", price: 6.50, is_available: true, sort_order: 0 },
-      { category_id: categories[2].id, restaurant_id: restaurantId, name: "Craft Cola", description: "Artisan cola", price: 3.50, is_available: true, sort_order: 0 },
+      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Margherita Classica", description: "San Marzano tomato sauce, fresh buffalo mozzarella, hand-torn basil, and extra virgin olive oil.", price: 16.00, is_available: true, sort_order: 0, image_url: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Spicy Diavola", description: "Tomato sauce, fior di latte, spicy Calabrian salami, chili flakes, and hot honey drizzle.", price: 19.50, is_available: true, sort_order: 1, image_url: "https://images.unsplash.com/photo-1628840042765-356cda07504e?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Truffle Mushroom", description: "White base with roasted wild mushrooms, truffle cream, fontina cheese, and fresh thyme.", price: 22.00, is_available: true, sort_order: 2, image_url: "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[1].id, restaurant_id: restaurantId, name: "Wood-Fired Garlic Bread", description: "Rustic sourdough batons smothered in roasted garlic butter and pecorino romano.", price: 8.50, is_available: true, sort_order: 0, image_url: "https://images.unsplash.com/photo-1573140247632-f8fd74997d5c?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[1].id, restaurant_id: restaurantId, name: "Burrata Caprese", description: "Creamy burrata cheese served with heirloom cherry tomatoes, basil pesto, and balsamic glaze.", price: 14.00, is_available: true, sort_order: 1, image_url: "https://images.unsplash.com/photo-1606850246029-dd00e5270ce4?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[2].id, restaurant_id: restaurantId, name: "Italian Craft Cola", description: "Artisan cola brewed with natural botanicals and citrus zest.", price: 4.50, is_available: true, sort_order: 0 },
+      { category_id: categories[2].id, restaurant_id: restaurantId, name: "Blood Orange Soda", description: "Sparkling blood orange soda, chilled to perfection.", price: 4.50, is_available: true, sort_order: 1 },
     ]);
   } else if (templateType === 'cafe' && categories.length > 0) {
      await supabase.from("menu_items").insert([
-      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Espresso", description: "Double shot", price: 3.50, is_available: true, sort_order: 0 },
-      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Cappuccino", description: "Espresso with steamed milk", price: 4.50, is_available: true, sort_order: 1 },
-      { category_id: categories[2].id, restaurant_id: restaurantId, name: "Croissant", description: "Butter croissant", price: 3.00, is_available: true, sort_order: 0 },
+      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Double Shot Espresso", description: "A rich, full-bodied double shot of our house blend espresso with a beautiful crema.", price: 3.50, is_available: true, sort_order: 0, image_url: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Oat Milk Flat White", description: "Smooth microfoam oat milk poured over a velvety double ristretto.", price: 4.80, is_available: true, sort_order: 1, image_url: "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[1].id, restaurant_id: restaurantId, name: "Kyoto Cold Brew", description: "Slow-drip cold brew coffee steeped for 18 hours, served over craft ice.", price: 5.50, is_available: true, sort_order: 0, image_url: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[1].id, restaurant_id: restaurantId, name: "Matcha Lemonade", description: "Ceremonial grade matcha whisked with fresh squeezed lemonade.", price: 6.00, is_available: true, sort_order: 1, image_url: "https://images.unsplash.com/photo-1536599018102-9f803c140fc1?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[2].id, restaurant_id: restaurantId, name: "Almond Croissant", description: "Flaky all-butter croissant filled with almond frangipane and topped with toasted almonds.", price: 4.50, is_available: true, sort_order: 0, image_url: "https://images.unsplash.com/photo-1555507036-ab1f40ce88f7?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[2].id, restaurant_id: restaurantId, name: "Avocado Toast", description: "Smashed avocado, radish shavings, and micro-greens on toasted seeded sourdough.", price: 9.50, is_available: true, sort_order: 1, image_url: "https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?q=80&w=800&auto=format&fit=crop" },
+    ]);
+  } else if (templateType === 'fine_dining' && categories.length > 0) {
+     await supabase.from("menu_items").insert([
+      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Wagyu Beef Tartare", description: "Hand-cut A5 Wagyu, cured egg yolk, caper berries, and house-made truffle brioche crisps.", price: 28.00, is_available: true, sort_order: 0, image_url: "https://images.unsplash.com/photo-1626078235282-3df64bba2da5?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[0].id, restaurant_id: restaurantId, name: "Seared Foie Gras", description: "Hudson Valley foie gras, fig compote, aged balsamic reduction, and toasted hazelnuts.", price: 32.00, is_available: true, sort_order: 1, image_url: "https://images.unsplash.com/photo-1553163147-622ab57be1c7?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[1].id, restaurant_id: restaurantId, name: "Pan-Roasted Halibut", description: "Wild-caught Alaskan halibut, saffron beurre blanc, beluga lentils, and charred asparagus.", price: 46.00, is_available: true, sort_order: 0, image_url: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[1].id, restaurant_id: restaurantId, name: "Dry-Aged Duck Breast", description: "Lavender-honey glazed duck breast, parsnip purée, sour cherry jus, and braised endive.", price: 42.00, is_available: true, sort_order: 1, image_url: "https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=800&auto=format&fit=crop" },
+      { category_id: categories[2].id, restaurant_id: restaurantId, name: "Valrhona Chocolate Soufflé", description: "Guanaja dark chocolate soufflé served with a quenelle of Madagascar vanilla bean crème anglaise.", price: 18.00, is_available: true, sort_order: 0, image_url: "https://images.unsplash.com/photo-1541783245831-57d6fb0926d3?q=80&w=800&auto=format&fit=crop" },
     ]);
   }
 

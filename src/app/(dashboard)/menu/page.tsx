@@ -303,7 +303,7 @@ export default function MenuPage() {
     });
   }
 
-  async function handleGenerateTemplate(type: 'pizzeria' | 'cafe') {
+  async function handleGenerateTemplate(type: 'pizzeria' | 'cafe' | 'fine_dining') {
     if (!restaurantId) return;
     setIsGenerating(true);
     toast.loading("Generating menu template...");
@@ -456,7 +456,7 @@ export default function MenuPage() {
       </div>
 
       {categories.length === 0 ? (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-3">
           <Card className="glass-panel flex flex-col items-center justify-center p-12 text-center col-span-full mb-6">
             <div className="h-20 w-20 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6">
               <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10h16"/><path d="M4 14h16"/><path d="M4 18h16"/><path d="M4 6h16"/></svg>
@@ -541,11 +541,33 @@ export default function MenuPage() {
             <CardContent>
               <Button 
                 variant="outline" 
-                className="w-full border-amber-600/20 hover:bg-amber-600/10 hover:text-amber-700"
+                className="w-full border-amber-600/20 hover:bg-amber-600/10 hover:text-amber-700 backdrop-blur-md"
                 onClick={() => handleGenerateTemplate('cafe')}
                 disabled={isGenerating}
               >
                 Use Cafe Template
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover-lift border border-purple-500/20 bg-purple-500/5 transition-all backdrop-blur-xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardHeader className="relative">
+              <CardTitle className="text-purple-500 flex items-center gap-2 text-xl">
+                🍷 Fine Dining
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Premium multi-course setup. Includes Hors d'oeuvres, Mains, and Desserts with high-end sample items.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="relative">
+              <Button 
+                variant="outline" 
+                className="w-full border-purple-500/20 hover:bg-purple-500/10 hover:text-purple-600 backdrop-blur-md"
+                onClick={() => handleGenerateTemplate('fine_dining')}
+                disabled={isGenerating}
+              >
+                Use Fine Dining Template
               </Button>
             </CardContent>
           </Card>
