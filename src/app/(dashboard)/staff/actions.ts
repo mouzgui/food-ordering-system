@@ -79,7 +79,8 @@ export async function createStaffMember(
   }
 
   const adminClient = (await createAdminClient()) as any;
-  const internalEmail = `${username.toLowerCase()}@staff.local`;
+  const safeUsername = username.toLowerCase().replace(/[^a-z0-9_.-]/g, "");
+  const internalEmail = `${safeUsername}@staff.local`;
 
   // 1. Create user via admin API
   const { data: authData, error: createError } =
