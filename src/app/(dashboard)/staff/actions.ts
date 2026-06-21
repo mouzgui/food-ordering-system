@@ -95,8 +95,8 @@ export async function createStaffMember(
   const userId = authData.user.id;
 
   // 2. Add to restaurant_members
-  const supabase = (await createClient()) as any;
-  const { data, error } = (await supabase
+  // Use adminClient to bypass RLS and avoid infinite recursion
+  const { data, error } = (await adminClient
     .from("restaurant_members")
     .insert([{ restaurant_id: restaurantId, user_id: userId, role }] as any)
     .select()
@@ -140,7 +140,8 @@ export async function removeStaffMember(id: string) {
     return { error: "You do not have permission to remove this staff member" };
   }
 
-  const { error } = await supabase
+  const adminClient = await createAdminClient();
+  const { error } = await adminClient
     .from("restaurant_members")
     .update({ is_active: false } as Record<string, any>)
     .eq("id", id);
@@ -173,7 +174,8 @@ export async function changeStaffRole(
     return { error: "You do not have permission to assign this role" };
   }
 
-  const { error } = await supabase
+  const adminClient = await createAdminClient();
+  const { error } = await adminClient
     .from("restaurant_members")
     .update({ role } as Record<string, any>)
     .eq("id", id);
