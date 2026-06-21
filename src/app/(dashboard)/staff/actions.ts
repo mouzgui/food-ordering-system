@@ -141,9 +141,9 @@ export async function removeStaffMember(id: string) {
   }
 
   const adminClient = await createAdminClient();
-  const { error } = await adminClient
+  const { error } = await (adminClient as any)
     .from("restaurant_members")
-    .update({ is_active: false } as Record<string, any>)
+    .update({ is_active: false })
     .eq("id", id);
 
   if (error) return { error: error.message };
@@ -175,9 +175,9 @@ export async function changeStaffRole(
   }
 
   const adminClient = await createAdminClient();
-  const { error } = await adminClient
+  const { error } = await (adminClient as any)
     .from("restaurant_members")
-    .update({ role } as Record<string, any>)
+    .update({ role })
     .eq("id", id);
 
   if (error) return { error: error.message };
