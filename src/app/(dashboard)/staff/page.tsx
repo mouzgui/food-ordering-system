@@ -30,13 +30,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { fetchStaffMembers, inviteStaffMember as inviteAction, removeStaffMember as removeAction, changeStaffRole as changeRoleAction } from "./actions";
+import { fetchStaffMembers, createStaffMember as createAction, removeStaffMember as removeAction, changeStaffRole as changeRoleAction } from "./actions";
 
 interface StaffMember {
   id: string;
   user_id: string;
   name: string;
   email: string;
+  username?: string;
   role: StaffRole;
   is_active: boolean;
   joined_at: string;
@@ -63,7 +64,8 @@ export default function StaffPage() {
   const [currentRole, setCurrentRole] = useState<StaffRole>("manager");
   const [currentMemberId, setCurrentMemberId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
-  const [newEmail, setNewEmail] = useState("");
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<Exclude<StaffRole, "owner">>("waiter");
 
   useEffect(() => {
@@ -83,10 +85,10 @@ export default function StaffPage() {
     loadData();
   }, []);
 
-  async function inviteMember() {
-    if (!newName.trim() || !newEmail.trim() || !restaurantId) return;
+  async function createMember() {
+    if (!newName.trim() || !newUsername.trim() || !newPassword.trim() || !restaurantId) return;
     
-    const res = await inviteAction(restaurantId, newName, newEmail, newRole);
+    const res = await createAction(restaurantId, newName, newUsername, newPassword, newRole);
     if (res.error) {
       toast.error(res.error);
       return;
@@ -97,8 +99,9 @@ export default function StaffPage() {
     }
     
     setNewName("");
-    setNewEmail("");
-    toast.success(`Invitation sent to ${newEmail}`);
+    setNewUsername("");
+    setNewPassword("");
+    toast.success(`Staff member created successfully`);
   }
 
   async function removeMember(id: string) {
@@ -159,11 +162,11 @@ export default function StaffPage() {
         <Dialog>
           <DialogTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
-            {t("staff.inviteMember")}
+            Add Staff Member
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t("staff.inviteMember")}</DialogTitle>
+              <DialogTitle>Add Staff Member</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -171,8 +174,12 @@ export default function StaffPage() {
                 <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Jean Dupont" />
               </div>
               <div className="space-y-2">
-                <Label>Email</Label>
-                <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="jean@restaurant.com" />
+                <Label>Username</Label>
+                <Input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="jeandupont" />
+              </div>
+              <div className="space-y-2">
+                <Label>Password / PIN</Label>
+                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" />
               </div>
               <div className="space-y-2">
                 <Label>Role</Label>
@@ -197,9 +204,9 @@ export default function StaffPage() {
               </DialogClose>
               <DialogClose
                 className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2"
-                onClick={inviteMember}
+                onClick={createMember}
               >
-                Send Invite
+                Create Member
               </DialogClose>
             </DialogFooter>
           </DialogContent>
@@ -231,7 +238,7 @@ export default function StaffPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{member.name}</p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {member.email}
+                    @{member.username || member.email.split("@")[0]}
                   </p>
                 </div>
                 <Badge className={`text-xs ${roleColors[member.role]}`}>

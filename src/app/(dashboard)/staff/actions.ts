@@ -45,9 +45,10 @@ export async function fetchStaffMembers() {
       user_id: m.user_id,
       name:
         authUser?.user_metadata?.full_name ||
-        authUser?.email?.split("@")[0] ||
+        authUser?.user_metadata?.username ||
         "Unknown User",
       email: authUser?.email || "",
+      username: authUser?.user_metadata?.username || "",
       role: m.role,
       is_active: m.is_active,
       joined_at: new Date(m.created_at).toISOString().split("T")[0],
@@ -62,10 +63,11 @@ export async function fetchStaffMembers() {
   };
 }
 
-export async function inviteStaffMember(
+export async function createStaffMember(
   restaurantId: string,
   name: string,
-  email: string,
+  username: string,
+  password: string,
   role: Exclude<StaffRole, "owner">,
 ) {
   const membership = await requireRole(["owner", "manager"]);
@@ -73,18 +75,22 @@ export async function inviteStaffMember(
     return { error: "You do not have access to this restaurant" };
   }
   if (!canManageTarget(membership.role, role)) {
-    return { error: "You do not have permission to invite this role" };
+    return { error: "You do not have permission to create this role" };
   }
 
   const adminClient = await createAdminClient();
+  const internalEmail = `${username}@${restaurantId}.local`;
 
-  // 1. Send invite email via admin API
-  const { data: authData, error: inviteError } =
-    await adminClient.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: name },
+  // 1. Create user via admin API
+  const { data: authData, error: createError } =
+    await adminClient.auth.admin.createUser({
+      email: internalEmail,
+      password: password,
+      email_confirm: true,
+      user_metadata: { full_name: name, username: username },
     });
 
-  if (inviteError) return { error: inviteError.message };
+  if (createError) return { error: createError.message };
 
   const userId = authData.user.id;
 
@@ -96,14 +102,19 @@ export async function inviteStaffMember(
     .select()
     .single()) as any;
 
-  if (error) return { error: error.message };
+  if (error) {
+    // If inserting into restaurant_members fails, we should ideally clean up the created user
+    // For now, return the error
+    return { error: error.message };
+  }
 
   return {
     member: {
       id: data.id,
       user_id: userId,
       name: name,
-      email: email,
+      username: username,
+      email: internalEmail,
       role: role,
       is_active: true,
       joined_at: new Date().toISOString().split("T")[0],
