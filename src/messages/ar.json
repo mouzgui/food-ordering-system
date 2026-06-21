@@ -58,8 +58,10 @@
     "status": {
       "pending": "قيد الانتظار",
       "confirmed": "مؤكد",
+      "accepted": "مقبول",
       "preparing": "قيد التحضير",
       "ready": "جاهز",
+      "served": "تم التقديم",
       "delivered": "تم التسليم",
       "cancelled": "ملغي"
     },

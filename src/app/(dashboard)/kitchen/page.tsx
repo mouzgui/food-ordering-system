@@ -25,25 +25,38 @@ interface KitchenOrder {
   order_items?: { item_name: string; quantity: number; item_price: number }[];
 }
 
-const STATUS_META: Record<
-  OrderStatus,
-  { title: string; next?: OrderStatus; action?: string; icon: string }
-> = {
-  pending: { title: "New Orders", next: "accepted", action: "Accept", icon: "🛎️" },
-  confirmed: { title: "Confirmed", icon: "📋" },
-  accepted: { title: "Accepted", next: "preparing", action: "Start Preparing", icon: "📥" },
-  preparing: { title: "Preparing", next: "ready", action: "Mark Ready", icon: "👨‍🍳" },
-  ready: { title: "Ready", icon: "✅" },
-  served: { title: "Served", icon: "🍽️" },
-  delivered: { title: "Delivered", icon: "🏁" },
-  cancelled: { title: "Cancelled", icon: "✕" },
-};
+function ElapsedTimer({ startTime, status }: { startTime: string; status: OrderStatus }) {
+  const [elapsed, setElapsed] = useState(0);
 
-function timeAgo(dateStr: string) {
-  const minutes = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  return `${Math.floor(minutes / 60)}h ago`;
+  useEffect(() => {
+    if (status === "ready") return; // Stop timer when ready
+
+    const start = new Date(startTime).getTime();
+    const updateTimer = () => {
+      setElapsed(Math.floor((Date.now() - start) / 60000));
+    };
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, [startTime, status]);
+
+  if (status === "ready") {
+    return <span className="text-green-500 font-bold">Done</span>;
+  }
+
+  const isWarning = elapsed >= 10 && elapsed < 15;
+  const isCritical = elapsed >= 15;
+
+  return (
+    <span
+      className={`font-mono text-sm font-bold ${
+        isCritical ? "text-red-500 animate-pulse" : isWarning ? "text-orange-500" : "text-muted-foreground"
+      }`}
+    >
+      {elapsed}m
+    </span>
+  );
 }
 
 export default function KitchenPage() {
@@ -122,6 +135,8 @@ export default function KitchenPage() {
 
           if (payload.eventType === "INSERT") {
             toast.success(`New kitchen order ${data.order_number}`);
+            // Optional: Play a sound
+            // new Audio('/kitchen-bell.mp3').play().catch(() => {});
           }
         }
       )
@@ -132,15 +147,11 @@ export default function KitchenPage() {
     };
   }, [restaurantId, supabase]);
 
-  const visibleColumns = useMemo(
-    () => KITCHEN_VISIBLE_STATUSES.map((status) => ({ status, ...STATUS_META[status] })),
-    []
-  );
-
   async function handleTransition(orderId: string, nextStatus: OrderStatus) {
     const currentOrder = orders.find((order) => order.id === orderId);
     if (!currentOrder) return;
 
+    // Optimistic update
     setOrders((prev) =>
       prev.map((order) =>
         order.id === orderId ? { ...order, status: nextStatus } : order
@@ -158,114 +169,173 @@ export default function KitchenPage() {
       return;
     }
 
-    toast.success(`${currentOrder.order_number} moved to ${STATUS_META[nextStatus].title}`);
+    if (nextStatus === "ready") {
+        toast.success(`Order ${currentOrder.order_number} is Ready!`);
+    } else {
+        toast.success(`Order ${currentOrder.order_number} is now ${nextStatus}`);
+    }
   }
 
+  // Column filtering
+  const incomingOrders = orders.filter((o) => o.status === "pending" || o.status === "accepted");
+  const preparingOrders = orders.filter((o) => o.status === "preparing");
+  const readyOrders = orders.filter((o) => o.status === "ready");
+
   if (loading) {
-    return <div className="flex h-64 items-center justify-center">Loading kitchen queue...</div>;
+    return <div className="flex h-64 items-center justify-center">Loading Kitchen Display System...</div>;
   }
 
   if (role === "waiter") {
-    return <div className="flex h-64 items-center justify-center">Kitchen access is not available for waiter accounts.</div>;
+    return <div className="flex h-64 items-center justify-center">Kitchen access is restricted.</div>;
   }
 
+  const renderTicket = (order: KitchenOrder, actionName: string, nextStatus: OrderStatus | null, colorClass: string) => (
+    <Card key={order.id} className={`glass-panel overflow-hidden border-t-4 ${colorClass}`}>
+      <CardHeader className="p-4 pb-2 bg-muted/20">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <CardTitle className="text-xl font-bold font-mono">
+              {order.order_number}
+            </CardTitle>
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+              <Badge variant="secondary" className="text-xs px-2 py-0.5 rounded-sm">
+                Table {order.tables?.number || order.tables?.label || "?"}
+              </Badge>
+              {order.customer_info?.name && (
+                <span className="text-xs font-medium text-muted-foreground truncate max-w-[120px]">
+                  {order.customer_info.name}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+             <ElapsedTimer startTime={order.created_at} status={order.status} />
+             {order.status === "pending" && <Badge className="text-[10px] h-4 bg-amber-500/20 text-amber-500 hover:bg-amber-500/20 px-1.5">NEW</Badge>}
+             {order.status === "accepted" && <Badge className="text-[10px] h-4 bg-sky-500/20 text-sky-500 hover:bg-sky-500/20 px-1.5">ACCEPTED</Badge>}
+          </div>
+        </div>
+      </CardHeader>
+      
+      <div className="border-t border-dashed border-white/20 my-0" />
+      
+      <CardContent className="p-0">
+        <div className="p-4 space-y-3">
+          {order.order_items?.map((item, index) => (
+            <div
+              key={`${order.id}-${index}`}
+              className="flex items-start gap-3"
+            >
+              <span className="font-mono font-bold text-lg leading-none mt-0.5 text-primary min-w-[28px]">
+                {item.quantity}x
+              </span>
+              <span className="font-medium text-base leading-tight">
+                {item.item_name}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {nextStatus && (
+          <div className="p-4 pt-0">
+            <Button
+              size="lg"
+              className={`w-full font-bold text-sm h-12 uppercase tracking-wide hover-lift transition-all shadow-md ${
+                nextStatus === 'ready' 
+                  ? 'bg-green-600 hover:bg-green-500 text-white' 
+                  : nextStatus === 'preparing' 
+                  ? 'bg-orange-500 hover:bg-orange-400 text-white'
+                  : ''
+              }`}
+              onClick={() => handleTransition(order.id, nextStatus)}
+            >
+              {actionName}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-end justify-between gap-4">
+    <div className="h-[calc(100vh-6rem)] flex flex-col space-y-4 animate-fade-in">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Kitchen Queue</h1>
-          <p className="mt-1 text-muted-foreground">
-            Manage incoming orders from acceptance through ready state.
+          <h1 className="text-3xl font-bold tracking-tight">Kitchen Display</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {orders.length} active tickets
           </p>
         </div>
-        <div className="rounded-full bg-orange-500/10 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-400">
-          {orders.length} active kitchen orders
+        <div className="flex items-center gap-2 rounded-full bg-orange-500/10 px-4 py-2 border border-orange-500/20">
+          <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+          <span className="text-sm font-semibold text-orange-700 dark:text-orange-400">
+            Live Queue
+          </span>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-4">
-        {visibleColumns.map(({ status, title, action, next, icon }) => {
-          const columnOrders = orders.filter((order) => order.status === status);
-
-          return (
-            <div key={status} className="space-y-3">
-              <div className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-2.5">
-                <span>{icon}</span>
-                <h2 className="text-sm font-semibold">{title}</h2>
-                <Badge variant="secondary" className="ms-auto text-xs font-bold">
-                  {columnOrders.length}
-                </Badge>
-              </div>
-
-              <ScrollArea className="h-[calc(100vh-260px)]">
-                <div className="space-y-2 pe-2">
-                  {columnOrders.length === 0 ? (
-                    <div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">
-                      No orders
-                    </div>
-                  ) : (
-                    columnOrders.map((order) => (
-                      <Card key={order.id}>
-                        <CardHeader className="p-3 pb-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <CardTitle className="text-sm">{order.order_number}</CardTitle>
-                            <span className="text-xs text-muted-foreground">
-                              {timeAgo(order.created_at)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs">
-                              {order.tables?.label || "Unknown Table"}
-                            </Badge>
-                            {order.customer_info?.name && (
-                              <span className="text-xs text-muted-foreground">
-                                {order.customer_info.name}
-                              </span>
-                            )}
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-3 px-3 pb-3">
-                          <div className="space-y-1">
-                            {order.order_items?.map((item, index) => (
-                              <div
-                                key={`${order.id}-${index}`}
-                                className="flex items-center justify-between text-xs"
-                              >
-                                <span className="text-muted-foreground">
-                                  {item.quantity}x {item.item_name}
-                                </span>
-                                <span className="font-medium">
-                                  ${(item.item_price * item.quantity).toFixed(2)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-
-                          <div className="flex items-center justify-between border-t pt-2">
-                            <span className="text-xs font-medium">Total</span>
-                            <span className="text-sm font-bold text-primary">
-                              ${order.total_amount.toFixed(2)}
-                            </span>
-                          </div>
-
-                          {next && action && (
-                            <Button
-                              size="sm"
-                              className="w-full"
-                              onClick={() => handleTransition(order.id, next)}
-                            >
-                              {action}
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
+      <div className="flex-1 grid gap-4 lg:grid-cols-3 min-h-0">
+        {/* INCOMING */}
+        <div className="flex flex-col bg-muted/10 rounded-2xl border border-white/5 overflow-hidden">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-sky-500/10 to-transparent border-b border-white/5">
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <span className="text-sky-500">📥</span> Incoming
+            </h2>
+            <Badge variant="secondary" className="font-mono text-sm bg-background/50">
+              {incomingOrders.length}
+            </Badge>
+          </div>
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4 pb-4">
+              {incomingOrders.length === 0 ? (
+                <div className="text-center p-8 text-muted-foreground border border-dashed rounded-xl border-white/10">No incoming orders</div>
+              ) : (
+                incomingOrders.map((order) => renderTicket(order, "Start Preparing", "preparing", "border-t-sky-500"))
+              )}
             </div>
-          );
-        })}
+          </ScrollArea>
+        </div>
+
+        {/* PREPARING */}
+        <div className="flex flex-col bg-muted/10 rounded-2xl border border-white/5 overflow-hidden ring-1 ring-orange-500/20 shadow-[0_0_30px_rgba(249,115,22,0.1)]">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-500/20 to-transparent border-b border-orange-500/20">
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <span className="text-orange-500">👨‍🍳</span> Now Preparing
+            </h2>
+            <Badge variant="secondary" className="font-mono text-sm bg-orange-500 text-white border-none">
+              {preparingOrders.length}
+            </Badge>
+          </div>
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4 pb-4">
+              {preparingOrders.length === 0 ? (
+                <div className="text-center p-8 text-muted-foreground border border-dashed rounded-xl border-white/10">No active prep</div>
+              ) : (
+                preparingOrders.map((order) => renderTicket(order, "Mark Ready", "ready", "border-t-orange-500"))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* READY */}
+        <div className="flex flex-col bg-muted/10 rounded-2xl border border-white/5 overflow-hidden">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-500/10 to-transparent border-b border-white/5">
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <span className="text-green-500">✅</span> Ready for Pickup
+            </h2>
+            <Badge variant="secondary" className="font-mono text-sm bg-background/50">
+              {readyOrders.length}
+            </Badge>
+          </div>
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4 pb-4">
+              {readyOrders.length === 0 ? (
+                <div className="text-center p-8 text-muted-foreground border border-dashed rounded-xl border-white/10">No ready orders</div>
+              ) : (
+                readyOrders.map((order) => renderTicket(order, "", null, "border-t-green-500 opacity-80 transition-opacity hover:opacity-100"))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
       </div>
     </div>
   );

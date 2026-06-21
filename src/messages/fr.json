@@ -58,8 +58,10 @@
     "status": {
       "pending": "En attente",
       "confirmed": "Confirmée",
+      "accepted": "Acceptée",
       "preparing": "En préparation",
       "ready": "Prête",
+      "served": "Servie",
       "delivered": "Livrée",
       "cancelled": "Annulée"
     },
