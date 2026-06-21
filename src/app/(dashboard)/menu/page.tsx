@@ -545,7 +545,7 @@ export default function MenuPage() {
 
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
         {/* Category sidebar */}
-        <Card className="h-fit">
+        <Card className="h-fit glass-panel">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               Categories
@@ -557,10 +557,10 @@ export default function MenuPage() {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:translate-x-1 ${
                     activeCategory === cat.id
                       ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      : "text-muted-foreground hover:bg-white/10 dark:hover:bg-white/5 hover:text-foreground"
                   }`}
                 >
                   <span className="truncate">{cat.name}</span>
@@ -610,7 +610,7 @@ export default function MenuPage() {
                   {currentCategory.items.map((item) => (
                     <Card
                       key={item.id}
-                      className={`group transition-all ${
+                      className={`group transition-all glass-panel ${
                         !item.is_available ? "opacity-60" : "hover-lift"
                       }`}
                     >

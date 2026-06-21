@@ -281,16 +281,16 @@ export default function OrdersPage() {
           <div className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
             {deliveredToday} delivered today
           </div>
-          <div className="flex items-center rounded-lg border bg-muted/50 p-1">
+          <div className="flex items-center rounded-lg border glass-panel p-1">
             <button
               onClick={() => setGroupBy("status")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${groupBy === "status" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${groupBy === "status" ? "glass shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/5"}`}
             >
               By Status
             </button>
             <button
               onClick={() => setGroupBy("table")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${groupBy === "table" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${groupBy === "table" ? "glass shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/5"}`}
             >
               By Table
             </button>
@@ -314,7 +314,7 @@ export default function OrdersPage() {
                 <div key={status} className="space-y-3">
                   {/* Column Header */}
                   <div
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r ${bgGradient}`}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl glass-panel bg-gradient-to-r ${bgGradient} border-white/20`}
                   >
                     <span className="text-base">{icon}</span>
                     <h2 className="text-sm font-semibold">
@@ -360,7 +360,7 @@ export default function OrdersPage() {
               return (
                 <div key={tableLabel} className="space-y-3">
                   {/* Column Header */}
-                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5">
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl glass-panel bg-gradient-to-r from-primary/10 to-primary/5 border-white/20">
                     <span className="text-base">📍</span>
                     <h2 className="text-sm font-semibold truncate">
                       {tableLabel}

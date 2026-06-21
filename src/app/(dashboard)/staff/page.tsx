@@ -214,7 +214,7 @@ export default function StaffPage() {
       </div>
 
       {/* Staff List */}
-      <Card>
+      <Card className="glass-panel">
         <CardHeader>
           <CardTitle className="text-base">Team Members</CardTitle>
         </CardHeader>
@@ -223,7 +223,7 @@ export default function StaffPage() {
             {staff.map((member) => (
               <div
                 key={member.id}
-                className={`flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/50 ${
+                className={`flex items-center gap-4 px-6 py-4 transition-all hover:bg-white/10 dark:hover:bg-white/5 hover:translate-x-1 ${
                   !member.is_active ? "opacity-50" : ""
                 }`}
               >

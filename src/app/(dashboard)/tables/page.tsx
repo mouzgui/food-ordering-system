@@ -228,7 +228,7 @@ export default function TablesPage() {
           {tables.map((table) => (
             <Card
               key={table.id}
-              className={`group cursor-pointer transition-all ${
+              className={`group cursor-pointer transition-all glass-panel ${
                 selectedTable?.id === table.id
                   ? "ring-2 ring-primary shadow-lg"
                   : "hover-lift"
@@ -281,7 +281,7 @@ export default function TablesPage() {
 
         {/* QR Preview Panel */}
         <div className="hidden lg:block">
-          <Card className="sticky top-6">
+          <Card className="sticky top-20 glass-panel">
             <CardHeader>
               <CardTitle className="text-base">
                 {selectedTable

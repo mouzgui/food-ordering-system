@@ -171,29 +171,43 @@
 @layer utilities {
   /* Glassmorphism effect */
   .glass {
-    @apply bg-background/60 backdrop-blur-xl border border-border/50;
+    @apply bg-background/50 dark:bg-background/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg;
   }
 
   .glass-heavy {
-    @apply bg-background/80 backdrop-blur-2xl border border-border/60;
+    @apply bg-background/70 dark:bg-background/60 backdrop-blur-2xl border border-white/30 dark:border-white/10 shadow-xl;
+  }
+  
+  .glass-panel {
+    @apply bg-background/30 dark:bg-background/20 backdrop-blur-md border border-white/10 shadow-md;
   }
 
   /* Gradient text */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-chart-2;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-chart-2 to-chart-3;
   }
 
   /* Animated gradient background */
   .bg-gradient-animated {
     background: linear-gradient(
-      135deg,
-      oklch(0.45 0.16 165),
-      oklch(0.55 0.2 260),
-      oklch(0.72 0.17 55),
-      oklch(0.45 0.16 165)
+      120deg,
+      oklch(0.95 0.05 165) 0%,
+      oklch(0.98 0.02 240) 40%,
+      oklch(0.96 0.05 55) 100%
     );
-    background-size: 300% 300%;
-    animation: gradient-shift 8s ease infinite;
+    background-size: 200% 200%;
+    animation: gradient-shift 15s ease infinite;
+  }
+
+  .dark .bg-gradient-animated {
+    background: linear-gradient(
+      120deg,
+      oklch(0.2 0.05 165) 0%,
+      oklch(0.15 0.02 260) 40%,
+      oklch(0.25 0.08 260) 100%
+    );
+    background-size: 200% 200%;
+    animation: gradient-shift 15s ease infinite;
   }
 
   /* Subtle hover lift */
@@ -201,7 +215,7 @@
     @apply transition-all duration-300 ease-out;
   }
   .hover-lift:hover {
-    @apply -translate-y-0.5 shadow-lg;
+    @apply -translate-y-1 shadow-xl border-white/40 dark:border-white/20;
   }
 
   /* Pulse dot for notifications */
