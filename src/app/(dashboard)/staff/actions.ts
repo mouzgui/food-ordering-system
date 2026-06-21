@@ -22,15 +22,15 @@ export async function fetchStaffMembers() {
   const membership = await requireMembership();
 
   // Get all members for this restaurant
-  const { data: members } = (await supabase
+  const { data: members } = await supabase
     .from("restaurant_members")
     .select("*")
-    .eq("restaurant_id", membership.restaurantId)) as any;
+    .eq("restaurant_id", membership.restaurantId);
 
   if (!members) return { staff: [] };
 
   // Fetch users from admin API to get emails and names
-  const adminClient = await createAdminClient();
+  const adminClient = (await createAdminClient()) as any;
   const { data: authData, error: authError } =
     await adminClient.auth.admin.listUsers();
 
@@ -78,7 +78,7 @@ export async function createStaffMember(
     return { error: "You do not have permission to create this role" };
   }
 
-  const adminClient = await createAdminClient();
+  const adminClient = (await createAdminClient()) as any;
   const internalEmail = `${username}@${restaurantId}.local`;
 
   // 1. Create user via admin API
@@ -96,11 +96,11 @@ export async function createStaffMember(
 
   // 2. Add to restaurant_members
   // Use adminClient to bypass RLS and avoid infinite recursion
-  const { data, error } = (await adminClient
+  const { data, error } = await adminClient
     .from("restaurant_members")
-    .insert([{ restaurant_id: restaurantId, user_id: userId, role }] as any)
+    .insert([{ restaurant_id: restaurantId, user_id: userId, role }])
     .select()
-    .single()) as any;
+    .single();
 
   if (error) {
     // If inserting into restaurant_members fails, we should ideally clean up the created user
@@ -126,11 +126,11 @@ export async function removeStaffMember(id: string) {
   const membership = await requireRole(["owner", "manager"]);
   const supabase = (await createClient()) as any;
 
-  const { data: target } = (await supabase
+  const { data: target } = await supabase
     .from("restaurant_members")
     .select("id, restaurant_id, role")
     .eq("id", id)
-    .single()) as any;
+    .single();
 
   if (!target || target.restaurant_id !== membership.restaurantId) {
     return { error: "Staff member not found" };
@@ -140,8 +140,8 @@ export async function removeStaffMember(id: string) {
     return { error: "You do not have permission to remove this staff member" };
   }
 
-  const adminClient = await createAdminClient();
-  const { error } = await (adminClient as any)
+  const adminClient = (await createAdminClient()) as any;
+  const { error } = await adminClient
     .from("restaurant_members")
     .update({ is_active: false })
     .eq("id", id);
@@ -157,11 +157,11 @@ export async function changeStaffRole(
   const membership = await requireRole(["owner", "manager"]);
   const supabase = (await createClient()) as any;
 
-  const { data: target } = (await supabase
+  const { data: target } = await supabase
     .from("restaurant_members")
     .select("id, restaurant_id, role")
     .eq("id", id)
-    .single()) as any;
+    .single();
 
   if (!target || target.restaurant_id !== membership.restaurantId) {
     return { error: "Staff member not found" };
@@ -174,8 +174,8 @@ export async function changeStaffRole(
     return { error: "You do not have permission to assign this role" };
   }
 
-  const adminClient = await createAdminClient();
-  const { error } = await (adminClient as any)
+  const adminClient = (await createAdminClient()) as any;
+  const { error } = await adminClient
     .from("restaurant_members")
     .update({ role })
     .eq("id", id);

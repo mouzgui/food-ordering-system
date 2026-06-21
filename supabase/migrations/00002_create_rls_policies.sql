@@ -15,6 +15,16 @@ RETURNS SETOF UUID AS $$
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- ============================================
+-- Helper function: get restaurant IDs where user is owner/manager
+-- ============================================
+CREATE OR REPLACE FUNCTION get_manager_restaurant_ids()
+RETURNS SETOF UUID AS $$
+  SELECT restaurant_id
+  FROM restaurant_members
+  WHERE user_id = auth.uid() AND is_active = true AND role IN ('owner', 'manager');
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- ============================================
 -- RESTAURANTS
 -- ============================================
 ALTER TABLE restaurants ENABLE ROW LEVEL SECURITY;
@@ -77,13 +87,13 @@ CREATE POLICY "public_select_tables_by_token" ON tables
   FOR SELECT USING (true); -- QR token lookup needs public read; filtered by query
 
 CREATE POLICY "staff_insert_tables" ON tables
-  FOR INSERT WITH CHECK (restaurant_id IN (SELECT get_user_restaurant_ids()));
+  FOR INSERT WITH CHECK (restaurant_id IN (SELECT get_manager_restaurant_ids()));
 
 CREATE POLICY "staff_update_tables" ON tables
-  FOR UPDATE USING (restaurant_id IN (SELECT get_user_restaurant_ids()));
+  FOR UPDATE USING (restaurant_id IN (SELECT get_manager_restaurant_ids()));
 
 CREATE POLICY "staff_delete_tables" ON tables
-  FOR DELETE USING (restaurant_id IN (SELECT get_user_restaurant_ids()));
+  FOR DELETE USING (restaurant_id IN (SELECT get_manager_restaurant_ids()));
 
 -- ============================================
 -- CATEGORIES
@@ -95,13 +105,13 @@ CREATE POLICY "public_select_categories" ON categories
   FOR SELECT USING (true);
 
 CREATE POLICY "staff_insert_categories" ON categories
-  FOR INSERT WITH CHECK (restaurant_id IN (SELECT get_user_restaurant_ids()));
+  FOR INSERT WITH CHECK (restaurant_id IN (SELECT get_manager_restaurant_ids()));
 
 CREATE POLICY "staff_update_categories" ON categories
-  FOR UPDATE USING (restaurant_id IN (SELECT get_user_restaurant_ids()));
+  FOR UPDATE USING (restaurant_id IN (SELECT get_manager_restaurant_ids()));
 
 CREATE POLICY "staff_delete_categories" ON categories
-  FOR DELETE USING (restaurant_id IN (SELECT get_user_restaurant_ids()));
+  FOR DELETE USING (restaurant_id IN (SELECT get_manager_restaurant_ids()));
 
 -- ============================================
 -- MENU ITEMS
@@ -113,13 +123,13 @@ CREATE POLICY "public_select_menu_items" ON menu_items
   FOR SELECT USING (true);
 
 CREATE POLICY "staff_insert_menu_items" ON menu_items
-  FOR INSERT WITH CHECK (restaurant_id IN (SELECT get_user_restaurant_ids()));
+  FOR INSERT WITH CHECK (restaurant_id IN (SELECT get_manager_restaurant_ids()));
 
 CREATE POLICY "staff_update_menu_items" ON menu_items
-  FOR UPDATE USING (restaurant_id IN (SELECT get_user_restaurant_ids()));
+  FOR UPDATE USING (restaurant_id IN (SELECT get_manager_restaurant_ids()));
 
 CREATE POLICY "staff_delete_menu_items" ON menu_items
-  FOR DELETE USING (restaurant_id IN (SELECT get_user_restaurant_ids()));
+  FOR DELETE USING (restaurant_id IN (SELECT get_manager_restaurant_ids()));
 
 -- ============================================
 -- ORDERS

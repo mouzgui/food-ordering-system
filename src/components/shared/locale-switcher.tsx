@@ -16,8 +16,9 @@ export function LocaleSwitcher() {
   const router = useRouter();
 
   function onSelectLocale(newLocale: Locale) {
-    // Set locale cookie and reload
-    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000`;
+    if (typeof document !== 'undefined') {
+      document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000`;
+    }
     router.refresh();
   }
 

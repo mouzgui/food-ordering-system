@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -624,8 +625,8 @@ export default function MenuPage() {
                           <div className="flex items-start gap-4">
                             {/* Image placeholder or actual image */}
                             {item.image_url ? (
-                              <div className="h-20 w-20 shrink-0 rounded-xl bg-muted overflow-hidden shadow-sm">
-                                <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+                              <div className="h-20 w-20 shrink-0 rounded-xl bg-muted overflow-hidden shadow-sm relative">
+                                <Image src={item.image_url} alt={item.name} fill sizes="80px" className="object-cover" />
                               </div>
                             ) : (
                               <div className="h-20 w-20 shrink-0 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center">

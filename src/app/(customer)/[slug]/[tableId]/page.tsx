@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -127,7 +128,9 @@ export default function CustomerMenuPage() {
 
   // Hydration fix for Zustand persist
   const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   /* ───── Play notification sound via Web Audio API ───── */
   const playNotificationSound = () => {
@@ -766,11 +769,13 @@ export default function CustomerMenuPage() {
                     >
                       <div className="flex gap-4">
                         {item.image_url ? (
-                          <div className="h-[72px] w-[72px] shrink-0 rounded-xl overflow-hidden shadow-sm">
-                            <img
+                          <div className="h-[72px] w-[72px] shrink-0 rounded-xl overflow-hidden shadow-sm relative">
+                            <Image
                               src={item.image_url}
                               alt={item.name}
-                              className="h-full w-full object-cover"
+                              fill
+                              sizes="72px"
+                              className="object-cover"
                             />
                           </div>
                         ) : (

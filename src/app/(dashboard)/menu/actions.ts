@@ -2,9 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { requireRole } from "@/lib/auth/permissions";
 
 export async function fetchMenuData() {
-  const supabase = await createClient() as any;
+  const supabase = (await createClient()) as any;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
@@ -14,19 +15,19 @@ export async function fetchMenuData() {
     .eq("user_id", user.id)
     .single() as any;
 
-  if (!member) return { error: "Restaurant not found" };
+  if (!member || !member.restaurant_id) return { error: "Restaurant not found" };
 
   const { data: categories } = await supabase
     .from("categories")
     .select("*")
     .eq("restaurant_id", member.restaurant_id)
-    .order("sort_order") as any;
+    .order("sort_order");
 
   const { data: items } = await supabase
     .from("menu_items")
     .select("*")
     .eq("restaurant_id", member.restaurant_id)
-    .order("sort_order") as any;
+    .order("sort_order");
 
   return {
     restaurantId: member.restaurant_id,
@@ -36,10 +37,13 @@ export async function fetchMenuData() {
 }
 
 export async function createCategory(restaurantId: string, name: string, description: string, sortOrder: number) {
-  const supabase = await createClient() as any;
+  const membership = await requireRole(["owner", "manager"]);
+  if (membership.restaurantId !== restaurantId) return { error: "Unauthorized" };
+
+  const supabase = (await createClient()) as any;
   const { data, error } = await supabase
     .from("categories")
-    .insert([{ restaurant_id: restaurantId, name, description, sort_order: sortOrder }] as any)
+    .insert([{ restaurant_id: restaurantId, name, description, sort_order: sortOrder }])
     .select()
     .single();
 
@@ -48,7 +52,8 @@ export async function createCategory(restaurantId: string, name: string, descrip
 }
 
 export async function deleteCategory(id: string) {
-  const supabase = await createClient() as any;
+  await requireRole(["owner", "manager"]);
+  const supabase = (await createClient()) as any;
   const { error } = await supabase.from("categories").delete().eq("id", id);
   if (error) return { error: error.message };
   return { success: true };
@@ -63,7 +68,10 @@ export async function createMenuItem(
   imageUrl: string | null = null,
   extras: any = {}
 ) {
-  const supabase = await createClient() as any;
+  const membership = await requireRole(["owner", "manager"]);
+  if (membership.restaurantId !== restaurantId) return { error: "Unauthorized" };
+
+  const supabase = (await createClient()) as any;
   const { data, error } = await supabase
     .from("menu_items")
     .insert([
@@ -77,7 +85,7 @@ export async function createMenuItem(
         extras: extras,
         is_available: true 
       }
-    ] as any)
+    ])
     .select()
     .single();
 
@@ -93,7 +101,8 @@ export async function updateMenuItem(
   imageUrl: string | null,
   extras: any
 ) {
-  const supabase = await createClient() as any;
+  await requireRole(["owner", "manager"]);
+  const supabase = (await createClient()) as any;
   const { data, error } = await supabase
     .from("menu_items")
     .update({ 
@@ -102,7 +111,7 @@ export async function updateMenuItem(
       price, 
       image_url: imageUrl,
       extras: extras
-    } as any)
+    })
     .eq("id", id)
     .select()
     .single();
@@ -112,6 +121,9 @@ export async function updateMenuItem(
 }
 
 export async function uploadMenuImage(formData: FormData) {
+  // STRICT AUTHORIZATION CHECK BEFORE USING ADMIN CLIENT
+  await requireRole(["owner", "manager"]);
+  
   const file = formData.get("file") as File;
   if (!file) return { error: "No file provided" };
   
@@ -126,7 +138,7 @@ export async function uploadMenuImage(formData: FormData) {
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-  const { data, error } = await supabaseAdmin.storage
+  const { error } = await supabaseAdmin.storage
     .from('menu-images')
     .upload(fileName, file, { contentType: file.type });
 
@@ -140,21 +152,26 @@ export async function uploadMenuImage(formData: FormData) {
 }
 
 export async function deleteMenuItem(id: string) {
-  const supabase = await createClient() as any;
+  await requireRole(["owner", "manager"]);
+  const supabase = (await createClient()) as any;
   const { error } = await supabase.from("menu_items").delete().eq("id", id);
   if (error) return { error: error.message };
   return { success: true };
 }
 
 export async function toggleItemAvailability(id: string, isAvailable: boolean) {
-  const supabase = await createClient() as any;
-  const { error } = await supabase.from("menu_items").update({ is_available: isAvailable } as any).eq("id", id);
+  await requireRole(["owner", "manager"]);
+  const supabase = (await createClient()) as any;
+  const { error } = await supabase.from("menu_items").update({ is_available: isAvailable }).eq("id", id);
   if (error) return { error: error.message };
   return { success: true };
 }
 
 export async function generateTemplate(restaurantId: string, templateType: 'pizzeria' | 'cafe') {
-  const supabase = await createClient() as any;
+  const membership = await requireRole(["owner", "manager"]);
+  if (membership.restaurantId !== restaurantId) return { error: "Unauthorized" };
+
+  const supabase = (await createClient()) as any;
   
   let categoriesData: { name: string; desc: string }[] = [];
   if (templateType === 'pizzeria') {
