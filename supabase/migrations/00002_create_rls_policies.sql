@@ -5,24 +5,38 @@
 -- ============================================
 
 -- ============================================
--- Helper function: get restaurant IDs for current user
+-- Helper functions for RLS (PL/pgSQL to prevent inlining and recursion)
 -- ============================================
+
 CREATE OR REPLACE FUNCTION get_user_restaurant_ids()
 RETURNS SETOF UUID AS $$
+BEGIN
+  RETURN QUERY
   SELECT restaurant_id
   FROM restaurant_members
   WHERE user_id = auth.uid() AND is_active = true;
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
--- ============================================
--- Helper function: get restaurant IDs where user is owner/manager
--- ============================================
 CREATE OR REPLACE FUNCTION get_manager_restaurant_ids()
 RETURNS SETOF UUID AS $$
+BEGIN
+  RETURN QUERY
   SELECT restaurant_id
   FROM restaurant_members
   WHERE user_id = auth.uid() AND is_active = true AND role IN ('owner', 'manager');
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+CREATE OR REPLACE FUNCTION get_owner_restaurant_ids()
+RETURNS SETOF UUID AS $$
+BEGIN
+  RETURN QUERY
+  SELECT restaurant_id
+  FROM restaurant_members
+  WHERE user_id = auth.uid() AND is_active = true AND role = 'owner';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
 -- ============================================
 -- RESTAURANTS
@@ -36,10 +50,7 @@ CREATE POLICY "staff_select_restaurants" ON restaurants
 -- Only owners can update restaurant settings
 CREATE POLICY "owner_update_restaurants" ON restaurants
   FOR UPDATE USING (
-    id IN (
-      SELECT restaurant_id FROM restaurant_members
-      WHERE user_id = auth.uid() AND role = 'owner' AND is_active = true
-    )
+    id IN (SELECT get_owner_restaurant_ids())
   );
 
 -- Authenticated users can create restaurants (during onboarding)
@@ -58,19 +69,13 @@ CREATE POLICY "members_select" ON restaurant_members
 -- Owners can manage members
 CREATE POLICY "owner_insert_members" ON restaurant_members
   FOR INSERT WITH CHECK (
-    restaurant_id IN (
-      SELECT restaurant_id FROM restaurant_members
-      WHERE user_id = auth.uid() AND role IN ('owner', 'manager') AND is_active = true
-    )
+    restaurant_id IN (SELECT get_manager_restaurant_ids())
     OR auth.uid() = user_id -- Allow self-insert during onboarding
   );
 
 CREATE POLICY "owner_update_members" ON restaurant_members
   FOR UPDATE USING (
-    restaurant_id IN (
-      SELECT restaurant_id FROM restaurant_members
-      WHERE user_id = auth.uid() AND role = 'owner' AND is_active = true
-    )
+    restaurant_id IN (SELECT get_owner_restaurant_ids())
   );
 
 -- ============================================
