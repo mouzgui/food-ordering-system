@@ -35,9 +35,12 @@
   "nav": {
     "overview": "Overview",
     "orders": "Orders",
+    "kitchen": "Kitchen",
+    "waiter": "Waiter",
     "menu": "Menu",
     "tables": "Tables",
     "staff": "Staff",
+    "performance": "Performance",
     "settings": "Settings"
   },
   "dashboard": {

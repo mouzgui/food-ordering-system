@@ -137,7 +137,7 @@ export default function DashboardLayout({
 
       const supabase = createClient();
       channel = supabase
-        .channel("global-new-orders")
+        .channel(`global-new-orders-${Date.now()}`)
         .on(
           "postgres_changes" as any,
           {

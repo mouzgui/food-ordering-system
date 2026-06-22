@@ -35,9 +35,12 @@
   "nav": {
     "overview": "Aperçu",
     "orders": "Commandes",
+    "kitchen": "Cuisine",
+    "waiter": "Serveur",
     "menu": "Menu",
     "tables": "Tables",
     "staff": "Personnel",
+    "performance": "Performance",
     "settings": "Paramètres"
   },
   "dashboard": {

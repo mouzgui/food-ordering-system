@@ -35,9 +35,12 @@
   "nav": {
     "overview": "نظرة عامة",
     "orders": "الطلبات",
+    "kitchen": "المطبخ",
+    "waiter": "النادل",
     "menu": "القائمة",
     "tables": "الطاولات",
     "staff": "الموظفون",
+    "performance": "الأداء",
     "settings": "الإعدادات"
   },
   "dashboard": {
